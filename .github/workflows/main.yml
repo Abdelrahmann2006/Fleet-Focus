@@ -7,20 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      # السطر ده بيمسح أي ذكر لريبلت من ذاكرة السيرفر
-      - name: Reset Java Tmp Dir
-        run: |
-          mkdir -p $HOME/tmp
-          echo "JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=$HOME/tmp" >> $GITHUB_ENV
-
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          
       - run: flutter pub get
       - run: flutter build apk --release
-      
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
