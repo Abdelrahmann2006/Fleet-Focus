@@ -11,6 +11,11 @@ jobs:
         with:
           channel: 'stable'
       - run: flutter pub get
+      
+      # الخطوة السحرية اللي هتطلع لنا البصمة
+      - name: Get SHA Keys
+        run: cd android && ./gradlew signingReport
+
       - run: flutter build apk --release
       - name: Upload APK
         uses: actions/upload-artifact@v4
