@@ -1,0 +1,51 @@
+{
+  "rules": {
+    // ─── device_states: المشارك يكتب بياناته فقط، القائد يقرأ الكل ─────
+    "device_states": {
+      "$uid": {
+        ".read":  "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'leader')",
+        ".write": "auth != null && auth.uid == $uid",
+        ".validate": "newData.hasChildren(['pulse', 'lastSeen'])",
+
+        "pulse":              { ".validate": "newData.isString() && (newData.val() == 'active' || newData.val() == 'idle' || newData.val() == 'offline')" },
+        "batteryPct":         { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
+        "batteryCharging":    { ".validate": "newData.isBoolean()" },
+        "screenActive":       { ".validate": "newData.isBoolean()" },
+        "storageFreePct":     { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
+        "currentJob":         { ".validate": "newData.isString()" },
+        "taskProgress":       { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
+        "connectionQuality":  { ".validate": "newData.isString()" },
+        "adminShield":        { ".validate": "newData.isBoolean()" },
+        "accessibilityEnabled":       { ".validate": "newData.isBoolean()" },
+        "overlayPermission":          { ".validate": "newData.isBoolean()" },
+        "batteryOptimizationIgnored": { ".validate": "newData.isBoolean()" },
+        "lastSeen":           { ".validate": "newData.isNumber()" }
+      }
+    },
+
+    // ─── device_commands_rt: القائد يكتب فقط، المشارك يقرأ أوامره فقط ──
+    "device_commands_rt": {
+      "$uid": {
+        ".read":  "auth != null && auth.uid == $uid",
+        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() == 'leader'",
+
+        "command":    { ".validate": "newData.isString()" },
+        "payload":    { ".validate": "newData.isString()" },
+        "issuedAt":   { ".validate": "newData.isNumber()" },
+        "issuedBy":   { ".validate": "newData.isString() && auth.uid == newData.val()" }
+      }
+    },
+
+    // ─── leader_state: القائد يكتب حالته، كل المشاركين يقرأون ───────────
+    "leader_state": {
+      "$uid": {
+        ".read":  "auth != null",
+        ".write": "auth != null && auth.uid == $uid && root.child('users').child(auth.uid).child('role').val() == 'leader'"
+      }
+    },
+
+    // ─── الباقي ممنوع ────────────────────────────────────────────────────
+    ".read":  false,
+    ".write": false
+  }
+}

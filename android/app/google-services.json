@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "80732158852",
+    "firebase_url": "https://panopticon-afbec-default-rtdb.firebaseio.com",
+    "project_id": "panopticon-afbec",
+    "storage_bucket": "panopticon-afbec.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:80732158852:android:d15ddb687451798476fbd1",
+        "android_client_info": {
+          "package_name": "com.abdelrahman.panopticon"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "80732158852-pcbmdcc3iih9ihjf40dbcddpj3ddc09v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.abdelrahman.panopticon",
+            "certificate_hash": "dd3fd11eb9b6d2a9134ca4dc05290d034a6bc800"
+          }
+        },
+        {
+          "client_id": "80732158852-dcrl1iavpcjfe6v0a8ekhpndq4kh74n4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWKCvAH2_hYbE5_jtQbK2OQg2eWdN_8po"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "80732158852-dcrl1iavpcjfe6v0a8ekhpndq4kh74n4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">نظام المنافسة</string>
+    <string name="device_admin_description">
+        يمنح هذا التطبيق صلاحيات إدارة الجهاز الضرورية لعمله بشكل صحيح.
+        تشمل الصلاحيات: قفل الشاشة، ومراقبة حالة الجهاز.
+    </string>
+    <string name="accessibility_service_description">
+        تمكّن هذه الخدمة التطبيق من مراقبة نشاط الجهاز وتقديم الدعم المطلوب.
+    </string>
+</resources>

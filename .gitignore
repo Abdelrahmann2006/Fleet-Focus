@@ -1,0 +1,5 @@
+.replit
+android-sdk/
+build/
+.dart_tool/
+android/.gradle/

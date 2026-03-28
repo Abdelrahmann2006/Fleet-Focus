@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="نظام إدارة المسابقة — لوحة القائد">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="نظام المسابقة">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <title>نظام المسابقة — القائد</title>
+
+  <style>
+    /* ── إخفاء شريط التمرير الافتراضي ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0D0D1A; }
+    ::-webkit-scrollbar-thumb { background: #C9A84C44; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #C9A84C88; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #0D0D1A;
+      height: 100%;
+      font-family: 'Tajawal', sans-serif;
+      direction: rtl;
+    }
+
+    /* ── شاشة تحميل قبل Flutter ── */
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      background: #0D0D1A;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.4s ease;
+    }
+
+    #loading-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid #C9A84C33;
+      border-top-color: #C9A84C;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .loading-text {
+      margin-top: 16px;
+      color: #C9A84C;
+      font-size: 16px;
+      font-family: 'Tajawal', sans-serif;
+      letter-spacing: 0.5px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+
+  <!-- خط Tajawal من Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <!-- شاشة تحميل مؤقتة -->
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div class="loading-text">جاري التحميل...</div>
+  </div>
+
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      const screen = document.getElementById('loading-screen');
+      if (screen) {
+        screen.classList.add('hidden');
+        setTimeout(() => screen.remove(), 500);
+      }
+    });
+  </script>
+
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

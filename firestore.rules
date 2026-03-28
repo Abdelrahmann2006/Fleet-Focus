@@ -1,0 +1,78 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── دوال مساعدة ──────────────────────────────────────────
+
+    /// هل المستخدم مُسجَّل الدخول؟
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    /// اقرأ دور المستخدم من مجموعة users
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    /// هل هو قائد؟
+    function isLeader() {
+      return isAuthenticated() && userRole() == 'leader';
+    }
+
+    /// هل هو مشارك؟
+    function isParticipant() {
+      return isAuthenticated() && userRole() == 'participant';
+    }
+
+    /// هل يملك الجهازَ (uid يطابق uid الموثَّق)؟
+    function ownsDevice(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // ─── مجموعة المستخدمين ────────────────────────────────────
+    match /users/{uid} {
+      // يقرأ ويعدّل ملفه الشخصي فقط
+      allow read, write: if ownsDevice(uid);
+      // القائد يقرأ ملفات المشاركين (للبحث والعرض)
+      allow read: if isLeader();
+    }
+
+    // ─── حالات الأجهزة ────────────────────────────────────────
+    // device_states/{uid} → يكتبها المشارك، يقرأها القائد
+    match /device_states/{uid} {
+      // القائد يقرأ حالة أي جهاز
+      allow read: if isLeader();
+
+      // المشارك يكتب فقط سجل جهازه الخاص
+      allow write: if ownsDevice(uid) && isParticipant();
+
+      // ❌ المشارك لا يقرأ حالة جهاز آخر
+      // ❌ المشارك لا يعدّل سجل جهاز آخر
+    }
+
+    // ─── أوامر الأجهزة ────────────────────────────────────────
+    // device_commands/{uid} → يكتبها القائد، يقرأها المشارك الخاص
+    match /device_commands/{uid} {
+      // القائد يكتب أوامر لأي جهاز ويقرأ للتحقق
+      allow read, write: if isLeader();
+
+      // المشارك يقرأ فقط أوامر جهازه الخاص
+      allow read: if ownsDevice(uid) && isParticipant();
+
+      // المشارك يُحدّث حقل acknowledged فقط (إقرار الاستلام)
+      allow update: if ownsDevice(uid)
+                    && isParticipant()
+                    && request.resource.data.keys().hasOnly(['acknowledged'])
+                    && request.resource.data.acknowledged == true;
+
+      // ❌ المشارك لا يكتب أوامر جديدة
+      // ❌ المشارك لا يقرأ أوامر جهاز آخر
+    }
+
+    // ─── رفض كل ما لم يُذكر ──────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
