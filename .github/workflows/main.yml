@@ -7,16 +7,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
+      # صناعة مفتاح عشان الـ SHA تظهر في الـ Logs
+      - name: Create Debug Keystore
+        run: |
+          mkdir -p ~/.android
+          keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+      
       - run: flutter pub get
       
-      # الخطوة السحرية اللي هتطلع لنا البصمة
+      # الخطوة اللي هنطلع منها الأرقام لـ Firebase
       - name: Get SHA Keys
         run: cd android && ./gradlew signingReport
 
-      - run: flutter build apk --release
+      - name: Build APK
+        run: flutter build apk --release --no-tree-shake-icons
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
