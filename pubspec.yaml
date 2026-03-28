@@ -10,90 +10,40 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Firebase
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1
   cloud_firestore: ^5.4.3
   firebase_storage: ^12.3.2
-  firebase_database: ^11.1.0       # Realtime DB — mid-frequency telemetry
-
-  # MQTT — ultra-high-frequency telemetry (HiveMQ TLS:8883)
+  firebase_database: ^11.1.0
   mqtt_client: ^10.5.0
-
-  # Device Sensors
-  battery_plus: ^6.0.2             # Battery % + charging state
-  geolocator: ^13.0.1              # GPS coordinates (background)
-  sensors_plus: ^6.1.0             # Accelerometer → activity detection
-
-  # Auth
+  battery_plus: ^6.0.2
+  geolocator: ^13.0.1
+  sensors_plus: ^6.1.0
   google_sign_in: ^6.2.1
   local_auth: ^2.3.0
-
-  # Navigation
   go_router: ^14.3.0
-
-  # State management
   provider: ^6.1.2
-
-  # UI
   flutter_animate: ^4.5.0
-
-  # Notifications (Foreground sticky)
   flutter_local_notifications: ^17.2.3
-
-  # Storage
   shared_preferences: ^2.3.2
-
-  # Images
   image_picker: ^1.1.2
-
-  # CDN & Network Assets
   cached_network_image: ^3.3.1
-
-  # Audio (buzzers)
   audioplayers: ^6.1.0
-
-  # HTTP
   http: ^1.2.0
-  http_parser: ^4.0.2          # MIME type parsing for multipart uploads
-
-  # Encryption — AES-256-CBC for MQTT payload security
+  http_parser: ^4.0.2
   encrypt: ^5.0.3
-  pointycastle: ^3.9.1          # Backend for the encrypt package
-
-  # Haptics
+  pointycastle: ^3.9.1
   haptic_feedback: ^0.6.0
-
-  # URL Launcher
   url_launcher: ^6.3.0
-
-  # File System (Log Batching)
   path_provider: ^2.1.4
-
-  # ZIP Compression (Log Batching — 60-80% size reduction)
   archive: ^3.6.1
-
-  # Phase 5 — Remote Technical Assistance & Compliance Auditing
-  # Offline local database (Blackbox buffering)
   hive: ^2.2.3
   hive_flutter: ^1.1.0
-
-  # Network connectivity detection (Sync-on-Reconnect)
   connectivity_plus: ^6.0.5
-
-  # Media Compression (Bandwidth-Optimized — <50 MB enforcement before Telegram upload)
   flutter_image_compress: ^2.3.0
-
-  # CameraX (Snap Check-in selfie capture)
   camera: ^0.11.2+1
-
-  # WebRTC P2P (Remote Support Stream)
   flutter_webrtc: ^1.4.1
-
-  # Date/time formatting
   intl: ^0.19.0
-
-  # Runtime Permission Requests (CAMERA, MIC, CONTACTS, etc.)
   permission_handler: ^11.3.1
 
 dev_dependencies:
@@ -103,6 +53,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/images/
-    - assets/audio/
+#  assets:
+#    - assets/images/
+#    - assets/audio/
