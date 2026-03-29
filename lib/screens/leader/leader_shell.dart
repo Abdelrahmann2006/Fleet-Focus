@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../constants/colors.dart';
 import '../../providers/leader_ui_provider.dart';
+import '../../providers/participant_stream_provider.dart'; // ⚡ التعديل: استدعاء مزود البيانات الحقيقية
 import 'leader_home_tab.dart';
 import 'join_requests_screen.dart';
 import 'reports_screen.dart';
@@ -38,7 +39,8 @@ class _LeaderShellState extends State<LeaderShell>
 
   @override
   Widget build(BuildContext context) {
-    final pending = context.watch<LeaderUIProvider>().pendingCount;
+    // ⚡ التعديل: قراءة عدد الطلبات المعلقة من الـ StreamProvider الحقيقي
+    final pending = context.watch<ParticipantStreamProvider>().pendingCount;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -98,7 +100,7 @@ class _LeaderShellState extends State<LeaderShell>
                   index: 1,
                   currentIndex: _currentIndex,
                   onTap: _onTabTap,
-                  badge: pending > 0 ? pending : null,
+                  badge: pending > 0 ? pending : null, // ⚡ استخدام العداد الحقيقي هنا
                 ),
                 _NavItem(
                   icon: Icons.bar_chart_outlined,
@@ -128,8 +130,7 @@ class _LeaderShellState extends State<LeaderShell>
     HapticFeedback.selectionClick();
     setState(() => _currentIndex = index);
   }
-
-  // ── Generate Code Dialog ──────────────────────────────────────
+    // ── Generate Code Dialog ──────────────────────────────────────
 
   void _showGenerateCodeDialog(BuildContext context) {
     final nameCtrl = TextEditingController();
