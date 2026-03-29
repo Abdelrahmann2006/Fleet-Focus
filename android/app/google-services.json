@@ -15,11 +15,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "80732158852-qimvi473irlpm31lgqa1golmptktc0l7.apps.googleusercontent.com",
+          "client_id": "80732158852-tlnp4v02cvlf3ihn7vvqq2vrvu3i7bjl.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.abdelrahman.panopticon",
-            "certificate_hash": "664e5ea007de17bdcca9952c682667c6d663a518"
+            "certificate_hash": "9fb38b484d79c8055e0c624adef9581de275a5f0"
           }
         },
         {
