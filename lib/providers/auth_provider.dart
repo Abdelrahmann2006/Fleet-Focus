@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'dart:math'; // إضافة مكتبة الرياضيات لتوليد أرقام عشوائية
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -196,7 +196,7 @@ class AuthProvider extends ChangeNotifier {
     return stored != null && stored.isNotEmpty;
   }
 
-  // ── إعداد حساب القائد مع كود 6 أرقام عشوائي ───────────────────────
+  // ── إعداد حساب القائد ──────────────────────────────────────────
   Future<void> setupLeaderAccount({
     required String fullName,
     required String appPassword,
@@ -204,9 +204,7 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     if (_firebaseUser == null) return;
     
-    // توليد كود من 6 أرقام عشوائية
-    final String leaderCode = (100000 + Random().nextInt(900000)).toString();
-    
+    // ملاحظة: الكود يتم توليده وتفعيله لاحقاً من خلال LeaderUIProvider
     final data = {
       'uid': _firebaseUser!.uid,
       'email': _firebaseUser!.email,
@@ -214,31 +212,49 @@ class AuthProvider extends ChangeNotifier {
       'photoURL': _firebaseUser!.photoURL,
       'role': 'leader',
       'fullName': fullName,
-      'leaderCode': leaderCode,
       'biometricEnabled': biometricEnabled,
       'createdAt': FieldValue.serverTimestamp(),
     };
     await _db.collection('users').doc(_firebaseUser!.uid).set(data, SetOptions(merge: true));
-    await _db.collection('leader_codes').doc(leaderCode).set({
-      'leaderUid': _firebaseUser!.uid,
-      'leaderName': fullName,
-      'createdAt': FieldValue.serverTimestamp(),
-      'active': true,
-    });
     
     await storeAppPassword(_firebaseUser!.uid, appPassword);
     _user = _user?.copyWith(role: 'leader', fullName: fullName, biometricEnabled: biometricEnabled);
     notifyListeners();
   }
 
+  // ── التعديل الجوهري: التحقق من المعرف في مجموعة users ─────────────
   Future<Map<String, dynamic>?> validateLeaderCode(String code) async {
-    final doc = await _db.collection('leader_codes').doc(code.trim()).get();
-    if (!doc.exists) return null;
-    final data = doc.data()!;
-    if (data['active'] != true) return null;
-    return data;
+    try {
+      final cleanCode = code.trim().toUpperCase(); // توحيد حالة الأحرف
+      
+      // البحث في مجموعة users عن مستخدم دوره leader وعنده نفس كود الانضمام
+      final query = await _db
+          .collection('users')
+          .where('leaderCode', isEqualTo: cleanCode)
+          .where('role', isEqualTo: 'leader')
+          .limit(1)
+          .get();
+
+      if (query.docs.isEmpty) {
+        debugPrint('ValidateCode: المعرف $cleanCode غير موجود');
+        return null;
+      }
+
+      final doc = query.docs.first;
+      final data = doc.data();
+
+      return {
+        'leaderUid': doc.id,
+        'leaderName': data['fullName'] ?? data['displayName'] ?? 'السيدة',
+        'active': true,
+      };
+    } catch (e) {
+      debugPrint('Error in validateLeaderCode: $e');
+      return null;
+    }
   }
 
+  // ── إعداد حساب التابع وربطه بالقائد ─────────────────────────────
   Future<void> setupParticipantAccount({
     required String leaderCode,
     required String leaderUid,
@@ -251,7 +267,7 @@ class AuthProvider extends ChangeNotifier {
       'displayName': _firebaseUser!.displayName,
       'photoURL': _firebaseUser!.photoURL,
       'role': 'participant',
-      'linkedLeaderCode': leaderCode.trim(),
+      'linkedLeaderCode': leaderCode.trim().toUpperCase(),
       'linkedLeaderUid': leaderUid,
       'biometricEnabled': biometricEnabled,
       'applicationStatus': 'pending',
@@ -259,9 +275,10 @@ class AuthProvider extends ChangeNotifier {
       'createdAt': FieldValue.serverTimestamp(),
     };
     await _db.collection('users').doc(_firebaseUser!.uid).set(data, SetOptions(merge: true));
+    
     _user = _user?.copyWith(
       role: 'participant',
-      linkedLeaderCode: leaderCode.trim(),
+      linkedLeaderCode: leaderCode.trim().toUpperCase(),
       linkedLeaderUid: leaderUid,
       biometricEnabled: biometricEnabled,
     );
