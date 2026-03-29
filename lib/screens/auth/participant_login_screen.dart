@@ -40,7 +40,7 @@ class _ParticipantLoginScreenState extends State<ParticipantLoginScreen> {
   }
 
   Future<void> _handleValidateCode() async {
-    final code = _codeCtrl.text.trim().toUpperCase();
+    final code = _codeCtrl.text.trim();
     if (code.isEmpty) {
       setState(() => _codeError = 'أدخل الكود المقدم من القائد');
       return;
@@ -80,7 +80,7 @@ class _ParticipantLoginScreenState extends State<ParticipantLoginScreen> {
     setState(() => _loading = true);
     try {
       await context.read<AuthProvider>().setupParticipantAccount(
-        leaderCode: _codeCtrl.text.trim().toUpperCase(),
+        leaderCode: _codeCtrl.text.trim(),
         leaderUid: _validatedLeader!['leaderUid'],
         biometricEnabled: _biometricEnabled,
       );
@@ -180,10 +180,10 @@ class _ParticipantLoginScreenState extends State<ParticipantLoginScreen> {
                     GoldInput(
                       label: 'كود القائد',
                       controller: _codeCtrl,
-                      hint: 'مثال: L-ABC123',
+                      hint: 'مثال: 123456',
                       errorText: _codeError,
-                      textCapitalization: TextCapitalization.characters,
-                      maxLength: 9,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
                       prefixIcon: const Icon(Icons.key_outlined, color: AppColors.textMuted, size: 18),
                     ),
                     const SizedBox(height: 12),
@@ -199,7 +199,7 @@ class _ParticipantLoginScreenState extends State<ParticipantLoginScreen> {
                           Icon(Icons.info_outline, size: 14, color: AppColors.accent),
                           SizedBox(width: 8),
                           Expanded(
-                            child: Text('الكود يبدأ بـ L- ويتكون من 8 أحرف. اطلبه من قائدك.',
+                            child: Text('الكود يتكون من 6 أرقام فقط. اطلبه من قائدك.',
                                 style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontFamily: 'Tajawal'),
                                 textAlign: TextAlign.right),
                           ),
@@ -228,7 +228,7 @@ class _ParticipantLoginScreenState extends State<ParticipantLoginScreen> {
                               children: [
                                 Text(_validatedLeader?['leaderName'] ?? '',
                                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.text, fontFamily: 'Tajawal')),
-                                Text('كود: ${_codeCtrl.text.trim().toUpperCase()}',
+                                Text('كود: ${_codeCtrl.text.trim()}',
                                     style: const TextStyle(fontSize: 13, color: AppColors.textMuted, fontFamily: 'Tajawal')),
                               ],
                             ),
@@ -295,32 +295,5 @@ class _BiometricRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onToggle,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: enabled ? AppColors.accent.withOpacity(0.05) : AppColors.backgroundCard,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: enabled ? AppColors.accent.withOpacity(0.4) : AppColors.border),
-        ),
-        child: Row(
-          children: [
-            Switch(value: enabled, onChanged: (_) => onToggle(), activeColor: AppColors.accent),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Text('المصادقة البيومترية',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600,
-                        color: enabled ? AppColors.accent : AppColors.text, fontFamily: 'Tajawal')),
-                const Text('بصمة الإصبع أو الوجه (اختياري)',
-                    style: TextStyle(fontSize: 13, color: AppColors.textMuted, fontFamily: 'Tajawal')),
-              ]),
-            ),
-            Icon(Icons.fingerprint, color: enabled ? AppColors.accent : AppColors.textMuted),
-          ],
-        ),
-      ),
-    );
-  }
-}
+    return
+      
