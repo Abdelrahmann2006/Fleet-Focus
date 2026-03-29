@@ -47,12 +47,11 @@ class _LeaderHomeTabState extends State<LeaderHomeTab> {
             final docs = partSnap.data?.docs ?? [];
             
             // تحويل البيانات من Firestore إلى Model الخاص بالبطاقة
-            final List<ParticipantCardModel> allParticipants = docs.map((doc) {
+            final List<ParticipantCardModel> allParticipants = docs.map<ParticipantCardModel>((doc) {
               final d = doc.data() as Map<String, dynamic>;
               return ParticipantCardModel(
                 uid: doc.id,
                 name: d['fullName'] ?? d['displayName'] ?? 'عنصر مجهول',
-                role: 'عنصر',
                 avatarUrl: d['photoURL'],
                 // تحويل الحالة من Firestore لقيم الـ Enum في التطبيق
                 livePulse: _mapStatusToPulse(d['applicationStatus']),
