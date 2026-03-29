@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:math'; // إضافة مكتبة الرياضيات لتوليد أرقام عشوائية
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -21,11 +22,7 @@ class AppUser {
   final String? applicationStatus;
   final bool biometricEnabled;
   final bool deviceSetupComplete;
-
-  /// بيانات موافقة السيدة (مدرجة عند القبول — Step 2)
   final ApprovalMeta? approvalMeta;
-
-  /// رمز العنصر المُوحَّد
   final String? assetCode;
 
   AppUser({
@@ -104,8 +101,6 @@ class AuthProvider extends ChangeNotifier {
   AppUser? _user;
   User? _firebaseUser;
   bool _isLoading = true;
-
-  // ── بوابة المصادقة البيومترية (في الذاكرة فقط — تُعاد عند كل تشغيل) ──
   bool _biometricVerified = false;
 
   AppUser? get user => _user;
@@ -152,7 +147,6 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
 
-    // ── Module 2: Burst Sync — يبدأ فور تسجيل الدخول ──────────
     if (fbUser != null) {
       SyncService.instance.start(uid: fbUser.uid);
     }
@@ -169,17 +163,11 @@ class AuthProvider extends ChangeNotifier {
     await _auth.signInWithCredential(credential);
   }
 
-  // ── بوابة المصادقة البيومترية ─────────────────────────────────
-
-  /// تُعلم النظام بنجاح المصادقة البيومترية — تُستدعى من BiometricGateScreen
   void markBiometricVerified() {
     _biometricVerified = true;
     notifyListeners();
   }
 
-  // ── تشفير كلمة المرور ─────────────────────────────────────────
-
-  /// SHA-256 hash of password with app-specific salt
   static String _hashPassword(String uid, String password) {
     final input = 'pnx_dpc_${uid}_${password}_2026';
     final bytes = Uint8List.fromList(utf8.encode(input));
@@ -188,7 +176,6 @@ class AuthProvider extends ChangeNotifier {
     return base64Encode(hash);
   }
 
-  /// تخزين hash كلمة مرور DPC في SharedPreferences
   Future<void> storeAppPassword(String uid, String rawPassword) async {
     if (rawPassword.isEmpty) return;
     final prefs = await SharedPreferences.getInstance();
@@ -196,30 +183,30 @@ class AuthProvider extends ChangeNotifier {
         '${_dpcPasswordKey}_$uid', _hashPassword(uid, rawPassword));
   }
 
-  /// التحقق من كلمة مرور DPC — إذا لم تُحفظ بعد تُعيد true تلقائياً
   Future<bool> verifyAppPassword(String uid, String rawPassword) async {
     final prefs = await SharedPreferences.getInstance();
     final stored = prefs.getString('${_dpcPasswordKey}_$uid');
-    if (stored == null || stored.isEmpty) return true; // لم تُضبط بعد
+    if (stored == null || stored.isEmpty) return true;
     return stored == _hashPassword(uid, rawPassword);
   }
 
-  /// هل توجد كلمة مرور DPC محفوظة لهذا القائد؟
   Future<bool> hasDpcPassword(String uid) async {
     final prefs = await SharedPreferences.getInstance();
     final stored = prefs.getString('${_dpcPasswordKey}_$uid');
     return stored != null && stored.isNotEmpty;
   }
 
-  // ── إعداد الحسابات ────────────────────────────────────────────
-
+  // ── إعداد حساب القائد مع كود 6 أرقام عشوائي ───────────────────────
   Future<void> setupLeaderAccount({
     required String fullName,
     required String appPassword,
     required bool biometricEnabled,
   }) async {
     if (_firebaseUser == null) return;
-    final leaderCode = 'L-${DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase().substring(7)}';
+    
+    // توليد كود من 6 أرقام عشوائية
+    final String leaderCode = (100000 + Random().nextInt(900000)).toString();
+    
     final data = {
       'uid': _firebaseUser!.uid,
       'email': _firebaseUser!.email,
@@ -238,14 +225,14 @@ class AuthProvider extends ChangeNotifier {
       'createdAt': FieldValue.serverTimestamp(),
       'active': true,
     });
-    // حفظ كلمة مرور DPC محلياً (SHA-256)
+    
     await storeAppPassword(_firebaseUser!.uid, appPassword);
     _user = _user?.copyWith(role: 'leader', fullName: fullName, biometricEnabled: biometricEnabled);
     notifyListeners();
   }
 
   Future<Map<String, dynamic>?> validateLeaderCode(String code) async {
-    final doc = await _db.collection('leader_codes').doc(code.toUpperCase()).get();
+    final doc = await _db.collection('leader_codes').doc(code.trim()).get();
     if (!doc.exists) return null;
     final data = doc.data()!;
     if (data['active'] != true) return null;
@@ -264,7 +251,7 @@ class AuthProvider extends ChangeNotifier {
       'displayName': _firebaseUser!.displayName,
       'photoURL': _firebaseUser!.photoURL,
       'role': 'participant',
-      'linkedLeaderCode': leaderCode.toUpperCase(),
+      'linkedLeaderCode': leaderCode.trim(),
       'linkedLeaderUid': leaderUid,
       'biometricEnabled': biometricEnabled,
       'applicationStatus': 'pending',
@@ -274,7 +261,7 @@ class AuthProvider extends ChangeNotifier {
     await _db.collection('users').doc(_firebaseUser!.uid).set(data, SetOptions(merge: true));
     _user = _user?.copyWith(
       role: 'participant',
-      linkedLeaderCode: leaderCode.toUpperCase(),
+      linkedLeaderCode: leaderCode.trim(),
       linkedLeaderUid: leaderUid,
       biometricEnabled: biometricEnabled,
     );
@@ -301,8 +288,6 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// تُعلِم الجهاز بأن شاشة الانتقال (Dying Screen) قد عُرضت
-  /// وتُغيَّر الحالة إلى `approved_active`
   Future<void> markDyingScreenComplete() async {
     if (_firebaseUser == null) return;
     await _db.collection('users').doc(_firebaseUser!.uid).update({
@@ -313,7 +298,6 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// تُعلِم بانتهاء جلسة الجرد
   Future<void> markAuditSubmitted() async {
     if (_firebaseUser == null) return;
     await _db.collection('users').doc(_firebaseUser!.uid).update({
@@ -324,7 +308,6 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// تحميل بيانات المستخدم من Firestore وتحديث الحالة المحلية
   Future<void> refreshUserData() async {
     final fbUser = _auth.currentUser;
     if (fbUser == null) return;
