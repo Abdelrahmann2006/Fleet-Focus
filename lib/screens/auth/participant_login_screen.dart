@@ -295,5 +295,31 @@ class _BiometricRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return
-      
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundCard,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'تفعيل الدخول السريع بالبصمة',
+            style: TextStyle(
+              color: AppColors.text,
+              fontFamily: 'Tajawal',
+              fontSize: 15,
+            ),
+          ),
+          Switch(
+            value: enabled,
+            onChanged: (val) => onToggle(),
+            activeColor: AppColors.accent,
+          ),
+        ],
+      ),
+    );
+  }
+}
