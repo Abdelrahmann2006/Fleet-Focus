@@ -27,6 +27,7 @@ class _ParticipantLoginScreenState extends State<ParticipantLoginScreen> {
 
   int get _stepIndex => _step == 'login' ? 0 : _step == 'code' ? 1 : 2;
 
+  // ── تسجيل الدخول بجوجل ──────────────────────────────────────────
   Future<void> _handleGoogleLogin() async {
     setState(() => _loading = true);
     try {
@@ -39,31 +40,36 @@ class _ParticipantLoginScreenState extends State<ParticipantLoginScreen> {
     }
   }
 
+  // ── التحقق من كود المعرف (PAN-ID) ──────────────────────────────
   Future<void> _handleValidateCode() async {
-    final code = _codeCtrl.text.trim();
+    final code = _codeCtrl.text.trim().toUpperCase(); // تحويل للأحرف الكبيرة تلقائياً
     if (code.isEmpty) {
-      setState(() => _codeError = 'أدخل الكود المقدم من القائد');
+      setState(() => _codeError = 'أدخل معرف الانضمام المقدم من القائد');
       return;
     }
     setState(() { _loading = true; _codeError = null; });
     try {
       final leaderData = await context.read<AuthProvider>().validateLeaderCode(code);
       if (leaderData == null) {
-        setState(() => _codeError = 'الكود غير صحيح أو منتهي الصلاحية');
+        setState(() => _codeError = 'المعرف غير صحيح أو منتهي الصلاحية');
         return;
       }
       _validatedLeader = leaderData;
       setState(() => _step = 'biometric');
     } catch (e) {
-      setState(() => _codeError = 'خطأ في التحقق من الكود');
+      setState(() => _codeError = 'خطأ في التحقق من المعرف');
     } finally {
       setState(() => _loading = false);
     }
   }
 
+  // ── تفعيل البصمة ──────────────────────────────────────────────
   Future<void> _handleBiometricToggle() async {
     final canCheck = await _localAuth.canCheckBiometrics;
-    if (!canCheck) { setState(() => _biometricEnabled = !_biometricEnabled); return; }
+    if (!canCheck) { 
+      setState(() => _biometricEnabled = !_biometricEnabled); 
+      return; 
+    }
     if (!_biometricEnabled) {
       final ok = await _localAuth.authenticate(
         localizedReason: 'تأكيد الهوية لتفعيل البيومترية',
@@ -75,18 +81,19 @@ class _ParticipantLoginScreenState extends State<ParticipantLoginScreen> {
     }
   }
 
+  // ── إتمام الإعداد ──────────────────────────────────────────────
   Future<void> _handleFinishSetup() async {
     if (_validatedLeader == null) return;
     setState(() => _loading = true);
     try {
       await context.read<AuthProvider>().setupParticipantAccount(
-        leaderCode: _codeCtrl.text.trim(),
+        leaderCode: _codeCtrl.text.trim().toUpperCase(),
         leaderUid: _validatedLeader!['leaderUid'],
         biometricEnabled: _biometricEnabled,
       );
       if (mounted) context.go('/participant/device-setup');
     } catch (e) {
-      _showError('حدث خطأ. حاول مرة أخرى.');
+      _showError('حدث خطأ أثناء الإعداد. حاول مرة أخرى.');
     } finally {
       setState(() => _loading = false);
     }
@@ -104,11 +111,11 @@ class _ParticipantLoginScreenState extends State<ParticipantLoginScreen> {
     else context.pop();
   }
 
-  String get _title => _step == 'login' ? 'دخول المتسابق' : _step == 'code' ? 'كود القائد' : 'الإعداد النهائي';
+  String get _title => _step == 'login' ? 'دخول المتسابق' : _step == 'code' ? 'معرف الانضمام' : 'الإعداد النهائي';
   String get _subtitle => _step == 'login'
       ? 'سجّل دخولك للمشاركة في المنافسة'
       : _step == 'code'
-          ? 'أدخل الكود المقدم لك من قائدك'
+          ? 'أدخل المعرف (ID) المقدم لك من قائدك'
           : 'اختر خيارات الأمان وابدأ ملء الاستمارة';
 
   @override
@@ -127,11 +134,11 @@ class _ParticipantLoginScreenState extends State<ParticipantLoginScreen> {
               child: Column(
                 children: [
                   const SizedBox(height: 16),
+                  // Header Navigation & Progress
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const SizedBox(width: 40),
-                      // Progress dots
                       Row(
                         children: List.generate(3, (i) => AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
@@ -152,7 +159,7 @@ class _ParticipantLoginScreenState extends State<ParticipantLoginScreen> {
                   ),
 
                   const SizedBox(height: 24),
-
+                  // Icon
                   Container(
                     width: 80, height: 80,
                     decoration: BoxDecoration(
@@ -164,27 +171,27 @@ class _ParticipantLoginScreenState extends State<ParticipantLoginScreen> {
                   ),
 
                   const SizedBox(height: 20),
-                  Text(_title,
-                      style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: AppColors.text, fontFamily: 'Tajawal')),
+                  Text(_title, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: AppColors.text, fontFamily: 'Tajawal')),
                   const SizedBox(height: 8),
-                  Text(_subtitle,
-                      style: const TextStyle(fontSize: 15, color: AppColors.textSecondary, fontFamily: 'Tajawal'),
-                      textAlign: TextAlign.center),
+                  Text(_subtitle, style: const TextStyle(fontSize: 15, color: AppColors.textSecondary, fontFamily: 'Tajawal'), textAlign: TextAlign.center),
                   const SizedBox(height: 36),
 
+                  // STEP 1: Login
                   if (_step == 'login') ...[
                     _GoogleSignInButtonSimple(loading: _loading, onTap: _handleGoogleLogin),
                   ],
 
+                  // STEP 2: Alphanumeric Code Input (UPDATED)
                   if (_step == 'code') ...[
                     GoldInput(
-                      label: 'كود القائد',
+                      label: 'معرف الانضمام (ID)',
                       controller: _codeCtrl,
-                      hint: 'مثال: 123456',
+                      hint: 'مثال: PAN-A1B2C3',
                       errorText: _codeError,
-                      keyboardType: TextInputType.number,
-                      maxLength: 6,
-                      prefixIcon: const Icon(Icons.key_outlined, color: AppColors.textMuted, size: 18),
+                      // التعديل هنا: يقبل حروف وأرقام الآن
+                      keyboardType: TextInputType.text,
+                      maxLength: 10,
+                      prefixIcon: const Icon(Icons.badge_outlined, color: AppColors.textMuted, size: 18),
                     ),
                     const SizedBox(height: 12),
                     Container(
@@ -197,19 +204,20 @@ class _ParticipantLoginScreenState extends State<ParticipantLoginScreen> {
                       child: const Row(
                         children: [
                           Icon(Icons.info_outline, size: 14, color: AppColors.accent),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text('الكود يتكون من 6 أرقام فقط. اطلبه من قائدك.',
-                                style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontFamily: 'Tajawal'),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text('أدخل المعرف الرسمي الصادر لك. المعرف يحتوي على حروف وأرقام.',
+                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontFamily: 'Tajawal'),
                                 textAlign: TextAlign.right),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 20),
-                    GoldButton(label: 'التحقق من الكود', onPressed: _handleValidateCode, loading: _loading),
+                    GoldButton(label: 'التحقق من المعرف', onPressed: _handleValidateCode, loading: _loading),
                   ],
 
+                  // STEP 3: Biometrics
                   if (_step == 'biometric') ...[
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -226,9 +234,9 @@ class _ParticipantLoginScreenState extends State<ParticipantLoginScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text(_validatedLeader?['leaderName'] ?? '',
+                                Text(_validatedLeader?['leaderName'] ?? 'القائد المعتمد',
                                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.text, fontFamily: 'Tajawal')),
-                                Text('كود: ${_codeCtrl.text.trim()}',
+                                Text('كود الارتباط: ${_codeCtrl.text.trim().toUpperCase()}',
                                     style: const TextStyle(fontSize: 13, color: AppColors.textMuted, fontFamily: 'Tajawal')),
                               ],
                             ),
@@ -253,6 +261,7 @@ class _ParticipantLoginScreenState extends State<ParticipantLoginScreen> {
   }
 }
 
+// ── Google Sign In Button ──────────────────────────────────────
 class _GoogleSignInButtonSimple extends StatelessWidget {
   final bool loading;
   final VoidCallback onTap;
@@ -275,8 +284,8 @@ class _GoogleSignInButtonSimple extends StatelessWidget {
             if (loading)
               const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.accent))
             else ...[
-              Container(width: 36, height: 36, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                  child: const Center(child: Text('G', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4285F4))))),
+              Container(width: 30, height: 30, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                  child: const Center(child: Text('G', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4285F4))))),
               const SizedBox(width: 14),
               const Text('تسجيل الدخول بـ Google',
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AppColors.text, fontFamily: 'Tajawal')),
@@ -288,6 +297,7 @@ class _GoogleSignInButtonSimple extends StatelessWidget {
   }
 }
 
+// ── Biometric Toggle Row ───────────────────────────────────────
 class _BiometricRow extends StatelessWidget {
   final bool enabled;
   final VoidCallback onToggle;
@@ -296,28 +306,25 @@ class _BiometricRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.backgroundCard,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
-            'تفعيل الدخول السريع بالبصمة',
-            style: TextStyle(
-              color: AppColors.text,
-              fontFamily: 'Tajawal',
-              fontSize: 15,
-            ),
+          Switch(value: enabled, onChanged: (_) => onToggle(), activeColor: AppColors.accent),
+          const Spacer(),
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('تفعيل البصمة / الوجه', style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w700, fontFamily: 'Tajawal', fontSize: 14)),
+              Text('لزيادة أمان الوصول للنظام', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Tajawal', fontSize: 11)),
+            ],
           ),
-          Switch(
-            value: enabled,
-            onChanged: (val) => onToggle(),
-            activeColor: AppColors.accent,
-          ),
+          const SizedBox(width: 12),
+          const Icon(Icons.fingerprint, color: AppColors.accent, size: 24),
         ],
       ),
     );
