@@ -130,7 +130,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                         const SizedBox(height: 28),
                         const Text(
-                          'نظام المنافسة',
+                          'نظام الالتزام',
                           style: TextStyle(
                             fontSize: 34,
                             fontWeight: FontWeight.w800,
@@ -141,7 +141,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                         const SizedBox(height: 10),
                         const Text(
-                          'منصة متكاملة لإدارة المتسابقين',
+                          'منصة متكاملة لإدارة العناصر',
                           style: TextStyle(
                             fontSize: 16,
                             color: AppColors.textSecondary,
@@ -201,14 +201,14 @@ class _SplashScreenState extends State<SplashScreen>
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.end,
                                         children: [
-                                          Text('أنا القائد',
+                                          Text('أنا السيدة',
                                               style: TextStyle(
                                                 fontSize: 18,
                                                 fontWeight: FontWeight.w700,
                                                 color: AppColors.text,
                                                 fontFamily: 'Tajawal',
                                               )),
-                                          Text('إدارة المتسابقين والاستمارات',
+                                          Text('إدارة العناصر والاستمارات',
                                               style: TextStyle(
                                                 fontSize: 13,
                                                 color: AppColors.textMuted,
@@ -265,14 +265,14 @@ class _SplashScreenState extends State<SplashScreen>
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.end,
                                         children: [
-                                          Text('أنا المتسابق',
+                                          Text('أنا العنصر',
                                               style: TextStyle(
                                                 fontSize: 18,
                                                 fontWeight: FontWeight.w700,
                                                 color: AppColors.text,
                                                 fontFamily: 'Tajawal',
                                               )),
-                                          Text('ملء الاستمارة والمشاركة',
+                                          Text('ملء استمارة الانضمام والولاء',
                                               style: TextStyle(
                                                 fontSize: 13,
                                                 color: AppColors.textMuted,
