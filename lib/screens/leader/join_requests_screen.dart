@@ -5,6 +5,7 @@ import '../../constants/colors.dart';
 import '../../models/approval_meta_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/participant_stream_provider.dart';
+import '../../repositories/participant_card_repository.dart'; // <--- السطر ده هو اللي هيحل المشكلة
 
 /// شاشة طلبات الانضمام
 /// تقرأ حصراً من Firestore الحقيقي وتدعم بروتوكول الموافقة الصارم
