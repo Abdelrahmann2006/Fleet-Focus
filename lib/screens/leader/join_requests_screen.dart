@@ -4,27 +4,17 @@ import 'package:provider/provider.dart';
 import '../../constants/colors.dart';
 import '../../models/approval_meta_model.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/leader_ui_provider.dart';
 import '../../providers/participant_stream_provider.dart';
-import '../../repositories/participant_card_repository.dart';
 
 /// شاشة طلبات الانضمام
-///
-/// ⚡ مُصلَحة: تقرأ من Firestore الحقيقي عبر ParticipantStreamProvider
-///    مع الرجوع للـ mock عند عدم توفّر بيانات Firebase
+/// تقرأ حصراً من Firestore الحقيقي وتدعم بروتوكول الموافقة الصارم
 class JoinRequestsScreen extends StatelessWidget {
   const JoinRequestsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final streamProvider = context.watch<ParticipantStreamProvider>();
-    final mockProvider   = context.watch<LeaderUIProvider>();
-
-    // ⚡ اختيار مصدر البيانات: Firestore الحقيقي أو Mock
-    final bool useRealData = streamProvider.isInitialized;
-    final int pendingCount = useRealData
-        ? streamProvider.pendingCount
-        : mockProvider.pendingCount;
+    final int pendingCount = streamProvider.pendingCount;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -32,12 +22,9 @@ class JoinRequestsScreen extends StatelessWidget {
         child: Column(
           children: [
             _buildHeader(context, pendingCount),
-            // ── طلبات المساعدة الطارئة (Petitions) ─────────────
             _PetitionSection(),
             Expanded(
-              child: useRealData
-                  ? _buildLiveList(context, streamProvider)
-                  : _buildMockList(context, mockProvider),
+              child: _buildLiveList(context, streamProvider),
             ),
           ],
         ),
@@ -45,10 +32,7 @@ class JoinRequestsScreen extends StatelessWidget {
     );
   }
 
-  // ── قائمة حقيقية (Firestore) ──────────────────────────────────
-
-  Widget _buildLiveList(
-      BuildContext context, ParticipantStreamProvider provider) {
+  Widget _buildLiveList(BuildContext context, ParticipantStreamProvider provider) {
     final requests = provider.pendingRequests;
     if (requests.isEmpty) return _buildEmpty();
     return ListView.separated(
@@ -56,20 +40,6 @@ class JoinRequestsScreen extends StatelessWidget {
       itemCount: requests.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (_, i) => _LiveRequestCard(req: requests[i]),
-    );
-  }
-
-  // ── قائمة Mock (تطوير) ────────────────────────────────────────
-
-  Widget _buildMockList(
-      BuildContext context, LeaderUIProvider provider) {
-    final requests = provider.joinRequests;
-    if (requests.isEmpty) return _buildEmpty();
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-      itemCount: requests.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (_, i) => _RequestCard(req: requests[i]),
     );
   }
 
@@ -131,7 +101,6 @@ class JoinRequestsScreen extends StatelessWidget {
     );
   }
 }
-
 // ── Live Request Card (Firestore) ─────────────────────────────
 
 class _LiveRequestCard extends StatelessWidget {
@@ -234,7 +203,7 @@ class _LiveRequestCard extends StatelessWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       padding: const EdgeInsets.symmetric(vertical: 8),
                     ),
-                    child: const Text('قبول',
+                    child: const Text('إعداد بروتوكول القبول',
                         style: TextStyle(fontSize: 13, color: Colors.white, fontFamily: 'Tajawal')),
                   ),
                 ),
@@ -246,8 +215,7 @@ class _LiveRequestCard extends StatelessWidget {
     );
   }
 
-  /// ✦ بروتوكول الموافقة الكاملة (Phase 11 — Step 2)
-  /// يفتح نافذة إدخال: توقيت الجرد + موعد/مكان المقابلة + الزي الرسمي
+  /// ✦ بروتوكول الموافقة الصارم (النسخة الكاملة)
   void _confirmAccept(BuildContext context) {
     final auth = context.read<AuthProvider>();
     final ladyName = auth.user?.fullName ?? 'السيدة';
@@ -255,19 +223,24 @@ class _LiveRequestCard extends StatelessWidget {
     // توليد رمز عنصر فريد
     final assetCode = 'E-${DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase().substring(4)}';
 
-    // حالة النموذج
-    String auditSchedule    = 'خلال 24 ساعة من الإخطار';
+    // متغيرات النموذج
+    String auditSchedule    = 'تفعيل مفاجئ بدون إنذار مسبق';
+    String locationType     = 'تحديد الزمان والمكان الآن';
     DateTime? interviewDt;
     final locationCtrl      = TextEditingController();
-    final dressCodeCtrl     = TextEditingController();
+    final dressCodeCtrl     = TextEditingController(text: 'حلاقة الشعر واللحية بالكامل.\nارتداء تي شيرت أسود سادة، بنطلون أسود، وحذاء رياضي أسود. يُمنع منعاً باتاً وجود أي شعارات أو علامات تجارية.\nيُمنع منعاً باتاً ارتداء أي إكسسوارات، سلاسل، خواتم، أو حتى ساعات يد.');
+    final extraNotesCtrl    = TextEditingController();
     bool submitting         = false;
 
     final auditOptions = [
-      'فوراً',
-      'خلال ساعتين من الإخطار',
-      'خلال 24 ساعة من الإخطار',
-      'خلال 48 ساعة من الإخطار',
-      'في موعد المقابلة مباشرةً',
+      'تفعيل مفاجئ بدون إنذار مسبق',
+      'في موعد محدد بالضبط (سيتم إشعارك)',
+      'سيتم إبلاغك لاحقاً',
+    ];
+
+    final locationOptions = [
+      'تحديد الزمان والمكان الآن',
+      'سيتم إرسال الإحداثيات والموعد لاحقاً',
     ];
 
     showDialog(
@@ -275,7 +248,6 @@ class _LiveRequestCard extends StatelessWidget {
       barrierDismissible: false,
       builder: (dialogCtx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) {
-          // ── دالة اختيار التاريخ/الوقت ─────────────────
           Future<void> pickInterviewTime() async {
             final now  = DateTime.now();
             final date = await showDatePicker(
@@ -283,23 +255,13 @@ class _LiveRequestCard extends StatelessWidget {
               initialDate: now.add(const Duration(days: 1)),
               firstDate: now,
               lastDate: now.add(const Duration(days: 60)),
-              builder: (_, child) => Theme(
-                data: ThemeData.dark().copyWith(
-                  colorScheme: ColorScheme.dark(primary: AppColors.gold),
-                ),
-                child: child!,
-              ),
+              builder: (_, child) => Theme(data: ThemeData.dark().copyWith(colorScheme: const ColorScheme.dark(primary: AppColors.gold)), child: child!),
             );
             if (date == null) return;
             final time = await showTimePicker(
               context: dialogCtx,
-              initialTime: TimeOfDay(hour: 10, minute: 0),
-              builder: (_, child) => Theme(
-                data: ThemeData.dark().copyWith(
-                  colorScheme: ColorScheme.dark(primary: AppColors.gold),
-                ),
-                child: child!,
-              ),
+              initialTime: const TimeOfDay(hour: 10, minute: 0),
+              builder: (_, child) => Theme(data: ThemeData.dark().copyWith(colorScheme: const ColorScheme.dark(primary: AppColors.gold)), child: child!),
             );
             if (time == null) return;
             setDialogState(() {
@@ -309,14 +271,7 @@ class _LiveRequestCard extends StatelessWidget {
 
           final interviewFormatted = interviewDt == null
               ? 'اضغط لاختيار الموعد'
-              : ApprovalMeta(
-                  ladyName: ladyName,
-                  assetCode: assetCode,
-                  auditSchedule: auditSchedule,
-                  interviewTimeIso: interviewDt!.toIso8601String(),
-                  interviewLocation: '',
-                  dressCode: '',
-                ).formattedInterviewTime;
+              : '${interviewDt!.day}/${interviewDt!.month}/${interviewDt!.year} — الساعة ${interviewDt!.hour.toString().padLeft(2,'0')}:${interviewDt!.minute.toString().padLeft(2,'0')}';
 
           return Dialog(
             backgroundColor: AppColors.backgroundCard,
@@ -328,190 +283,164 @@ class _LiveRequestCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ── ترويسة ────────────────────────────
                   Row(
                     children: [
-                      Icon(Icons.gavel_rounded, color: AppColors.gold, size: 20),
+                      const Icon(Icons.gavel_rounded, color: AppColors.gold, size: 20),
                       const SizedBox(width: 8),
                       const Expanded(
                         child: Text(
-                          'بروتوكول الموافقة — إعداد تعليمات العنصر',
+                          'بروتوكول الموافقة (System Trigger Logic)',
                           textAlign: TextAlign.right,
-                          style: TextStyle(
-                            color: AppColors.text,
-                            fontFamily: 'Tajawal',
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                          ),
+                          style: TextStyle(color: AppColors.text, fontFamily: 'Tajawal', fontSize: 14, fontWeight: FontWeight.w800),
                         ),
                       ),
                     ],
                   ),
                   const Divider(color: AppColors.border, height: 20),
 
-                  // ── رمز العنصر ────────────────────────
-                  _labeledRow('رمز العنصر:', assetCode, color: AppColors.gold),
-                  const SizedBox(height: 12),
+                  _labeledRow('رمز العنصر المخصص:', assetCode, color: AppColors.gold),
+                  const SizedBox(height: 16),
 
-                  // ── توقيت الجرد ───────────────────────
-                  _fieldLabel('1. توقيت بروتوكول الجرد الشامل:'),
-                  const SizedBox(height: 4),
+                  _fieldLabel('١. بروتوكول الجرد الشامل:'),
                   DropdownButtonFormField<String>(
                     value: auditSchedule,
                     dropdownColor: AppColors.backgroundElevated,
                     style: const TextStyle(color: AppColors.text, fontFamily: 'Tajawal', fontSize: 13),
-                    decoration: _inputDecoration('اختر توقيت الجرد'),
-                    items: auditOptions.map((o) => DropdownMenuItem(
-                      value: o,
-                      child: Text(o, textAlign: TextAlign.right,
-                          style: const TextStyle(fontFamily: 'Tajawal', fontSize: 13)),
-                    )).toList(),
+                    decoration: _inputDecoration(''),
+                    items: auditOptions.map((o) => DropdownMenuItem(value: o, child: Text(o, textAlign: TextAlign.right, style: const TextStyle(fontFamily: 'Tajawal', fontSize: 13)))).toList(),
                     onChanged: (v) => setDialogState(() => auditSchedule = v ?? auditSchedule),
                   ),
                   const SizedBox(height: 12),
 
-                  // ── موعد المقابلة ─────────────────────
-                  _fieldLabel('2. موعد المقابلة المباشرة:'),
-                  const SizedBox(height: 4),
-                  GestureDetector(
-                    onTap: pickInterviewTime,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: interviewDt != null ? AppColors.gold.withValues(alpha: 0.6) : AppColors.border,
+                  _fieldLabel('٢. الزمان والمكان:'),
+                  DropdownButtonFormField<String>(
+                    value: locationType,
+                    dropdownColor: AppColors.backgroundElevated,
+                    style: const TextStyle(color: AppColors.text, fontFamily: 'Tajawal', fontSize: 13),
+                    decoration: _inputDecoration(''),
+                    items: locationOptions.map((o) => DropdownMenuItem(value: o, child: Text(o, textAlign: TextAlign.right, style: const TextStyle(fontFamily: 'Tajawal', fontSize: 13)))).toList(),
+                    onChanged: (v) => setDialogState(() => locationType = v ?? locationType),
+                  ),
+                  if (locationType == 'تحديد الزمان والمكان الآن') ...[
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: pickInterviewTime,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                        decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.border)),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.calendar_today_outlined, color: AppColors.gold, size: 16),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(interviewFormatted, textAlign: TextAlign.right, style: const TextStyle(color: AppColors.text, fontFamily: 'Tajawal', fontSize: 13))),
+                          ],
                         ),
                       ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.calendar_today_outlined,
-                              color: interviewDt != null ? AppColors.gold : AppColors.textMuted,
-                              size: 16),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(interviewFormatted,
-                                textAlign: TextAlign.right,
-                                style: TextStyle(
-                                  color: interviewDt != null ? AppColors.text : AppColors.textMuted,
-                                  fontFamily: 'Tajawal',
-                                  fontSize: 13,
-                                )),
-                          ),
-                        ],
-                      ),
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: locationCtrl,
+                      textDirection: TextDirection.rtl,
+                      style: const TextStyle(color: AppColors.text, fontFamily: 'Tajawal', fontSize: 13),
+                      decoration: _inputDecoration('العنوان/الإحداثيات بدقة'),
+                    ),
+                  ],
                   const SizedBox(height: 12),
 
-                  // ── مكان المقابلة ─────────────────────
-                  _fieldLabel('3. مكان المقابلة:'),
-                  const SizedBox(height: 4),
-                  TextField(
-                    controller: locationCtrl,
-                    textDirection: TextDirection.rtl,
-                    style: const TextStyle(color: AppColors.text, fontFamily: 'Tajawal', fontSize: 13),
-                    decoration: _inputDecoration('العنوان الكامل للمقر'),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // ── الزي الرسمي ───────────────────────
-                  _fieldLabel('4. الزي الرسمي المطلوب:'),
-                  const SizedBox(height: 4),
+                  _fieldLabel('٣. المظهر العام (الزي الرسمي):'),
                   TextField(
                     controller: dressCodeCtrl,
+                    maxLines: 4,
                     textDirection: TextDirection.rtl,
                     style: const TextStyle(color: AppColors.text, fontFamily: 'Tajawal', fontSize: 13),
-                    decoration: _inputDecoration('مثال: بدلة رسمية داكنة، قميص أبيض'),
+                    decoration: _inputDecoration('التعليمات الخاصة بالزي...'),
+                  ),
+                  const SizedBox(height: 12),
+
+                  _fieldLabel('٤. تعليمات إضافية لبروتوكول الحضور (اختياري):'),
+                  TextField(
+                    controller: extraNotesCtrl,
+                    maxLines: 2,
+                    textDirection: TextDirection.rtl,
+                    style: const TextStyle(color: AppColors.text, fontFamily: 'Tajawal', fontSize: 13),
+                    decoration: _inputDecoration('مثال: قف بجوار الباب الحديدي على اليمين...'),
                   ),
                   const SizedBox(height: 16),
 
-                  // ── Appendix C — نموذج رسالة القبول ──
-                  _fieldLabel('5. معاينة رسالة القبول (Appendix C):'),
-                  const SizedBox(height: 6),
+                  // رسالة المعاينة الشاملة
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.gold.withOpacity(0.06),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.gold.withOpacity(0.35))),
+                    decoration: BoxDecoration(color: AppColors.gold.withOpacity(0.06), borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.gold.withOpacity(0.35))),
                     child: Text(
-                      _buildAppendixCMessage(
+                      _buildFullMessage(
                         name: req.name,
                         assetCode: assetCode,
                         ladyName: ladyName,
-                        interviewDt: interviewDt,
-                        location: locationCtrl.text.trim(),
-                        dressCode: dressCodeCtrl.text.trim(),
                         auditSchedule: auditSchedule,
+                        locationType: locationType,
+                        interviewStr: interviewFormatted,
+                        locationText: locationCtrl.text.trim(),
+                        dressCode: dressCodeCtrl.text.trim(),
+                        extraNotes: extraNotesCtrl.text.trim(),
                       ),
-                      style: const TextStyle(
-                        fontSize: 12, color: AppColors.text,
-                        fontFamily: 'Tajawal', height: 1.6),
+                      style: const TextStyle(fontSize: 11, color: AppColors.text, fontFamily: 'Tajawal', height: 1.6),
                       textAlign: TextAlign.right,
                     ),
                   ),
                   const SizedBox(height: 20),
 
-                  // ── أزرار الإجراء ─────────────────────
                   Row(
                     children: [
                       Expanded(
                         child: TextButton(
                           onPressed: submitting ? null : () => Navigator.pop(dialogCtx),
-                          child: const Text('إلغاء',
-                              style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Tajawal')),
+                          child: const Text('إلغاء', style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Tajawal')),
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: ElevatedButton(
                           onPressed: submitting ? null : () async {
-                            if (interviewDt == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                                content: Text('يرجى تحديد موعد المقابلة',
-                                    style: TextStyle(fontFamily: 'Tajawal')),
-                                backgroundColor: AppColors.error,
-                              ));
-                              return;
-                            }
-                            if (locationCtrl.text.trim().isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                                content: Text('يرجى إدخال مكان المقابلة',
-                                    style: TextStyle(fontFamily: 'Tajawal')),
-                                backgroundColor: AppColors.error,
-                              ));
-                              return;
+                            if (locationType == 'تحديد الزمان والمكان الآن') {
+                              if (interviewDt == null || locationCtrl.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى تحديد الموعد والمكان بدقة', style: TextStyle(fontFamily: 'Tajawal')), backgroundColor: AppColors.error));
+                                return;
+                              }
                             }
 
                             setDialogState(() => submitting = true);
 
-                            final meta = ApprovalMeta(
-                              ladyName:           ladyName,
-                              assetCode:          assetCode,
-                              auditSchedule:      auditSchedule,
-                              interviewTimeIso:   interviewDt!.toIso8601String(),
-                              interviewLocation:  locationCtrl.text.trim(),
-                              dressCode:          dressCodeCtrl.text.trim().isEmpty
-                                  ? 'وفق التعليمات' : dressCodeCtrl.text.trim(),
+                            // تجميع الرسالة كمتغير جاهز للحفظ في Firebase
+                            final finalMessage = _buildFullMessage(
+                              name: req.name,
+                              assetCode: assetCode,
+                              ladyName: ladyName,
+                              auditSchedule: auditSchedule,
+                              locationType: locationType,
+                              interviewStr: interviewFormatted,
+                              locationText: locationCtrl.text.trim(),
+                              dressCode: dressCodeCtrl.text.trim(),
+                              extraNotes: extraNotesCtrl.text.trim(),
                             );
+
+                            final metaData = {
+                              'ladyName': ladyName,
+                              'assetCode': assetCode,
+                              'systemMessage': finalMessage, // الرسالة الكاملة هتتسجل هنا
+                              'aiContext': "This is the current active protocol. The system is in a transitional 'Pre-Interview Lockdown' phase. Adjust all monitoring parameters, risk scores, and automated responses to align with these strict rules until the final Constitution is signed.",
+                            };
 
                             try {
                               await context.read<ParticipantStreamProvider>().approveWithMeta(
                                 uid: req.uid,
-                                meta: meta.toMap(),
+                                meta: metaData,
                                 assetCode: assetCode,
                               );
                               if (context.mounted) Navigator.pop(dialogCtx);
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                  content: Text(
-                                    '✓ تم إرسال بروتوكول القبول إلى العنصر ${req.name}',
-                                    style: const TextStyle(fontFamily: 'Tajawal'),
-                                  ),
+                                  content: Text('✓ تم تفعيل بروتوكول النظام وإرساله إلى ${req.name}', style: const TextStyle(fontFamily: 'Tajawal')),
                                   backgroundColor: AppColors.success,
                                 ));
                               }
@@ -521,15 +450,8 @@ class _LiveRequestCard extends StatelessWidget {
                           },
                           style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
                           child: submitting
-                              ? const SizedBox(width: 18, height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                              : const Text('إرسال البروتوكول',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontFamily: 'Tajawal',
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13,
-                                  )),
+                              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                              : const Text('تفعيل وإرسال', style: TextStyle(color: Colors.black, fontFamily: 'Tajawal', fontWeight: FontWeight.w700, fontSize: 13)),
                         ),
                       ),
                     ],
@@ -543,23 +465,18 @@ class _LiveRequestCard extends StatelessWidget {
     );
   }
 
-  static Widget _fieldLabel(String text) => Text(text,
-      textAlign: TextAlign.right,
-      style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Tajawal', fontSize: 12));
+  // دوال مساعدة للنافذة
+  static Widget _fieldLabel(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(text, textAlign: TextAlign.right, style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Tajawal', fontSize: 12, fontWeight: FontWeight.bold)),
+  );
 
   static Widget _labeledRow(String label, String value, {Color? color}) => Row(
     mainAxisAlignment: MainAxisAlignment.end,
     children: [
-      Text(value,
-          style: TextStyle(
-            color: color ?? AppColors.text,
-            fontFamily: 'Tajawal',
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-          )),
+      Text(value, style: TextStyle(color: color ?? AppColors.text, fontFamily: 'Tajawal', fontSize: 13, fontWeight: FontWeight.w700)),
       const SizedBox(width: 6),
-      Text(label,
-          style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Tajawal', fontSize: 12)),
+      Text(label, style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Tajawal', fontSize: 12)),
     ],
   );
 
@@ -569,13 +486,10 @@ class _LiveRequestCard extends StatelessWidget {
     hintStyle: const TextStyle(color: AppColors.textMuted, fontFamily: 'Tajawal', fontSize: 12),
     filled: true,
     fillColor: AppColors.background,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: AppColors.border)),
-    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: AppColors.border)),
-    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: AppColors.gold.withValues(alpha: 0.6))),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.gold.withValues(alpha: 0.6))),
   );
 
   void _confirmReject(BuildContext context) {
@@ -584,17 +498,12 @@ class _LiveRequestCard extends StatelessWidget {
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.backgroundCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('تأكيد الرفض',
-            textAlign: TextAlign.right,
-            style: TextStyle(color: AppColors.text, fontFamily: 'Tajawal', fontSize: 16)),
-        content: Text('سيُرفض طلب ${req.name} وسيتلقى إشعاراً فورياً.',
-            textAlign: TextAlign.right,
-            style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Tajawal', fontSize: 13)),
+                title: const Text('تأكيد الرفض', textAlign: TextAlign.right, style: TextStyle(color: AppColors.text, fontFamily: 'Tajawal', fontSize: 16)),
+        content: Text('سيُرفض طلب ${req.name} وسيتلقى إشعاراً فورياً.', textAlign: TextAlign.right, style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Tajawal', fontSize: 13)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('إلغاء',
-                style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Tajawal')),
+            child: const Text('إلغاء', style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Tajawal')),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -602,15 +511,13 @@ class _LiveRequestCard extends StatelessWidget {
               await context.read<ParticipantStreamProvider>().rejectRequest(req.uid);
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('✗ تم رفض ${req.name}',
-                      style: const TextStyle(fontFamily: 'Tajawal')),
+                  content: Text('✗ تم رفض ${req.name}', style: const TextStyle(fontFamily: 'Tajawal')),
                   backgroundColor: AppColors.error,
                 ));
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('تأكيد الرفض',
-                style: TextStyle(color: Colors.white, fontFamily: 'Tajawal')),
+            child: const Text('تأكيد الرفض', style: TextStyle(color: Colors.white, fontFamily: 'Tajawal')),
           ),
         ],
       ),
@@ -624,417 +531,58 @@ class _LiveRequestCard extends StatelessWidget {
     return 'منذ ${diff.inDays}ي';
   }
 
-  /// Appendix C — نموذج رسالة القبول الرسمي
-  static String _buildAppendixCMessage({
+  /// بناء الرسالة المعقدة الخاصة ببروتوكول القبول بصياغة سيادية صارمة
+  static String _buildFullMessage({
     required String name,
     required String assetCode,
     required String ladyName,
-    required DateTime? interviewDt,
-    required String location,
-    required String dressCode,
     required String auditSchedule,
+    required String locationType,
+    required String interviewStr,
+    required String locationText,
+    required String dressCode,
+    required String extraNotes,
   }) {
-    final interviewStr = interviewDt == null
-        ? '[لم يُحدَّد بعد]'
-        : '${interviewDt.day}/${interviewDt.month}/${interviewDt.year} — الساعة ${interviewDt.hour.toString().padLeft(2, '0')}:${interviewDt.minute.toString().padLeft(2, '0')}';
+    String locationTimeSection = locationType == 'سيتم إرسال الإحداثيات والموعد لاحقاً'
+        ? '[سيتم إرسال إحداثيات الموقع المشفر والتوقيت الدقيق في إشعار لاحق]'
+        : 'اليوم: $interviewStr\nالمقر: $locationText';
 
-    return '''بسم الله الرحمن الرحيم
+    return '''[إشعار نظام أمني عالي الأهمية]
+صادر من: القيادة العليا - السيدة $ladyName
+الوجهة: العنصر $assetCode
+الحالة: تفعيل بروتوكول "الجرد وما قبل المقابلة" (Pre-Interview Lockdown)
 
-إلى: $name
-الرمز المخصص: $assetCode
+بناءً على التماس الانضمام الذي قدمته بملء إرادتك، تقرر منحك فرصة العرض المبدئي للمثول أمام السيدة $ladyName.
+اعتباراً من لحظة استلامك لهذا الإشعار، تم تفعيل نظام التحكم الرقمي الشامل. جهازك الآن تحت إدارة السيدة عن بُعد، و هاتفك بالكامل يخضع لأحكام النظام. اقرأ كل حرف بعناية تامة؛ فالخطأ الأول هو الأخير، وعواقبه الطرد النهائي غير القابل للاستئناف.
 
-تحيةً طيبةً وبعد،
+أولاً: بروتوكول الجرد والرقابة المطلقة
+سيُفرض عليك إجراء جرد دقيق وشامل لكافة ممتلكاتك.
+- توقيت الجرد: [$auditSchedule]
+بمجرد حلول وقت الجرد، ستُقفل شاشة جهازك إجبارياً ولن يُسمح لك بتجاوز شاشة الجرد. بعد رفع البيانات، ستُقرر السيدة وحدها ما يحق لك الاحتفاظ به وما يجب إحضاره يوم المقابلة لتقرير مصيره.
 
-يسعدنا إبلاغك بأن طلب انضمامك قد نال موافقة $ladyName — المشرفة العليا على النظام — وذلك بعد مراجعة بياناتك الكاملة وتقييم ملفك بعناية.
+ثانياً: الاستدعاء والمثول المباشر لحضور المقابلة
+$locationTimeSection
 
-━━━ تفاصيل الخطوة التالية ━━━
+- تنبيه تقني حرج: بحلول موعد المقابلة، سيدخل جهازك في حالة "الإغلاق التام" (Total Lockdown). لن تُحرر الشاشة إلا بقرار مباشر من السيدة بعد انتهاء المقابلة واعتماد ممتلكاتك في النظام.
 
-📋 موعد الجرد الشامل:
-$auditSchedule
+ثالثاً: هيئة المثول (الزي الرسمي)
+$dressCode
 
-📅 موعد المقابلة الشخصية:
-$interviewStr
+رابعاً: قواعد التواجد الصارمة (غير قابلة للتفاوض أو التبرير)
+- التواجد أمام نقطة المقر المحددة قبل الموعد بـ ١٥ دقيقة تماماً.
+- يُمنع النطق بأي كلمة، أو المبادرة بالتحية، أو طرق الباب، أو محاولة فتحه بأي شكل.
+- قف في وضع الاستعداد، يداك معقودتان خلف ظهرك، ونظرك مثبت نحو الأرض لا يحيد.
+- عند حلول التوقيت بالثانية، افتح الباب، وتقدم بخطى ثابتة نحو النقطة المحددة سلفاً، وتجمد في مكانك (مع ترك مسافة متر عن أي شخص مجاور).
+- ستظل على هذه الحالة من الثبات التام والسكون المطلق حتى تتفضل السيدة بالظهور.
+${extraNotes.isNotEmpty ? '\nتوجيهات إضافية واجبة النفاذ:\n$extraNotes' : ''}
 
-📍 مكان المقابلة:
-${location.isEmpty ? '[سيُحدَّد لاحقاً]' : location}
+خامساً: المرحلة النهائية
+في حال اجتيازك للمقابلة، وتقييم السيدة أنك جدير بالبقاء تحت مظلتها، سيُفرض عليك في نهاية المقابلة قراءة "دستور النظام" كاملاً، والتوقيع عليه بـ "توقيع إلكتروني حي" كإعلان نهائي لإقرار الإنضمام.
 
-👔 الزي الرسمي المطلوب:
-${dressCode.isEmpty ? 'وفق التعليمات' : dressCode}
+تحذير نهائي:
+التأخر لثانية واحدة، التلاعب أو إخفاء أي عنصر أثناء الجرد، الإخلال بأي تفصيلة في المظهر، أو إبداء أي بادرة تردد أو ضعف، سيؤدي إلى رفض طلبك وإدراجك في القائمة السوداء للنظام للأبد.
 
-━━━ التعليمات الإلزامية ━━━
-
-١. يجب الحضور في الموعد المحدد بدقة تامة — التأخر بدون إذن مسبق يُعدّ مخالفة صريحة.
-٢. يجب إحضار جميع المستندات الأصلية المذكورة في الاستمارة.
-٣. يجب تحميل التطبيق وتفعيله قبل موعد المقابلة بـ 24 ساعة على الأقل.
-٤. أي تواصل خارجي يخص هذا النظام يمر عبر القنوات الرسمية حصراً.
-٥. التزامك بهذه التعليمات يُعدّ اختباراً أولياً لأهليتك للانضمام.
-
-مع أطيب التحيات والتقدير،
-$ladyName — المشرفة العليا
-نظام البانوبتيكون — وحدة القيادة المركزية''';
-  }
-}
-
-// ── Request Card (Mock — تطوير فقط) ──────────────────────────
-
-class _RequestCard extends StatelessWidget {
-  final JoinRequest req;
-  const _RequestCard({required this.req});
-
-  @override
-  Widget build(BuildContext context) {
-    final provider = context.read<LeaderUIProvider>();
-    final isPending = req.status == JoinRequestStatus.pending;
-    final borderColor = _statusColor(req.status);
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundCard,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          // Header
-          Row(
-            children: [
-              // تايم ستامب
-              Text(
-                _formatTime(req.requestedAt),
-                style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textMuted,
-                    fontFamily: 'Tajawal'),
-              ),
-              const Spacer(),
-              // الاسم + موديل الجهاز
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(req.name,
-                      style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.text,
-                          fontFamily: 'Tajawal')),
-                  Text(req.deviceModel,
-                      style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textSecondary,
-                          fontFamily: 'Tajawal')),
-                ],
-              ),
-              const SizedBox(width: 12),
-              // الأفاتار
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: borderColor.withOpacity(0.5), width: 2),
-                  color: AppColors.backgroundElevated,
-                ),
-                child: Center(
-                  child: Text(
-                    req.name.split(' ').take(2).map((w) => w[0]).join(),
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: borderColor,
-                        fontFamily: 'Tajawal'),
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 10),
-
-          if (!isPending) ...[
-            // حالة: مقبول / مرفوض
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Icon(_statusIcon(req.status), size: 14, color: borderColor),
-                const SizedBox(width: 5),
-                Text(
-                  _statusLabel(req.status),
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: borderColor,
-                      fontFamily: 'Tajawal'),
-                ),
-              ],
-            ),
-          ] else ...[
-            // أزرار الإجراء
-            Row(
-              children: [
-                // رفض
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _confirmReject(context, provider),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.error),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                    ),
-                    child: const Text('رفض',
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.error,
-                            fontFamily: 'Tajawal')),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                // قبول
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _confirmAccept(context, provider),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                    ),
-                    child: const Text('قبول',
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.white,
-                            fontFamily: 'Tajawal')),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  // ── قبول ─────────────────────────────────────────────────────
-
-  void _confirmAccept(BuildContext context, LeaderUIProvider provider) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.backgroundCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('تأكيد القبول',
-            textAlign: TextAlign.right,
-            style: TextStyle(
-                color: AppColors.text, fontFamily: 'Tajawal', fontSize: 16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text('سيُقبل طلب ${req.name}.',
-                textAlign: TextAlign.right,
-                style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontFamily: 'Tajawal',
-                    fontSize: 13)),
-            const SizedBox(height: 12),
-            // تنبيه الصلاحيات الإلزامية
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.warning.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.warning.withOpacity(0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: const [
-                  Row(
-                    children: [
-                      Expanded(child: SizedBox()),
-                      Text('صلاحيات إلزامية على الجهاز',
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.warning,
-                              fontFamily: 'Tajawal')),
-                      SizedBox(width: 5),
-                      Icon(Icons.warning_amber_outlined, size: 14, color: AppColors.warning),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  _PermRow(icon: Icons.admin_panel_settings_outlined, text: 'مشرف الجهاز (Device Admin)'),
-                  _PermRow(icon: Icons.accessibility_outlined, text: 'خدمات إمكانية الوصول'),
-                  _PermRow(icon: Icons.layers_outlined, text: 'الرسم فوق التطبيقات'),
-                  _PermRow(icon: Icons.battery_charging_full_outlined, text: 'تجاهل تحسين البطارية'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'سيُطلب من العنصر منح هذه الصلاحيات يدوياً من إعدادات الجهاز.',
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                  fontSize: 11, color: AppColors.textMuted, fontFamily: 'Tajawal'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('إلغاء',
-                style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Tajawal')),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              provider.acceptRequest(req.uid);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('✓ تم قبول ${req.name}',
-                      style: const TextStyle(fontFamily: 'Tajawal')),
-                  backgroundColor: AppColors.success,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
-            child: const Text('تأكيد القبول',
-                style: TextStyle(color: Colors.white, fontFamily: 'Tajawal')),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── رفض ──────────────────────────────────────────────────────
-
-  void _confirmReject(BuildContext context, LeaderUIProvider provider) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.backgroundCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('تأكيد الرفض',
-            textAlign: TextAlign.right,
-            style: TextStyle(color: AppColors.text, fontFamily: 'Tajawal', fontSize: 16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text('سيُرفض طلب ${req.name}.',
-                textAlign: TextAlign.right,
-                style: const TextStyle(
-                    color: AppColors.textSecondary, fontFamily: 'Tajawal', fontSize: 13)),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.error.withOpacity(0.2)),
-              ),
-              child: const Row(
-                children: [
-                  Expanded(child: SizedBox()),
-                  Text('سيتلقى إشعار رفض فوري ويُمسح الكاش المحلي على جهازه.',
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                          fontSize: 11, color: AppColors.error, fontFamily: 'Tajawal')),
-                  SizedBox(width: 6),
-                  Icon(Icons.info_outline, size: 13, color: AppColors.error),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('إلغاء',
-                style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Tajawal')),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              provider.rejectRequest(req.uid);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('✗ تم رفض ${req.name} وإرسال إشعار له',
-                      style: const TextStyle(fontFamily: 'Tajawal')),
-                  backgroundColor: AppColors.error,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('تأكيد الرفض',
-                style: TextStyle(color: Colors.white, fontFamily: 'Tajawal')),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Helpers ───────────────────────────────────────────────────
-
-  Color _statusColor(JoinRequestStatus s) {
-    switch (s) {
-      case JoinRequestStatus.pending:  return AppColors.warning;
-      case JoinRequestStatus.accepted: return AppColors.success;
-      case JoinRequestStatus.rejected: return AppColors.error;
-    }
-  }
-
-  IconData _statusIcon(JoinRequestStatus s) {
-    switch (s) {
-      case JoinRequestStatus.pending:  return Icons.pending_outlined;
-      case JoinRequestStatus.accepted: return Icons.check_circle_outline;
-      case JoinRequestStatus.rejected: return Icons.cancel_outlined;
-    }
-  }
-
-  String _statusLabel(JoinRequestStatus s) {
-    switch (s) {
-      case JoinRequestStatus.pending:  return 'معلق';
-      case JoinRequestStatus.accepted: return 'مقبول';
-      case JoinRequestStatus.rejected: return 'مرفوض';
-    }
-  }
-
-  String _formatTime(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 60) return 'منذ ${diff.inMinutes}د';
-    if (diff.inHours < 24)   return 'منذ ${diff.inHours}س';
-    return 'منذ ${diff.inDays}ي';
-  }
-}
-
-// ── Permission Row Widget ─────────────────────────────────────
-
-class _PermRow extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _PermRow({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(text,
-                textAlign: TextAlign.right,
-                style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                    fontFamily: 'Tajawal')),
-          ),
-          const SizedBox(width: 6),
-          Icon(icon, size: 13, color: AppColors.warning),
-        ],
-      ),
-    );
+القيادة المركزية - نظام Panopticon''';
   }
 }
 
@@ -1138,3 +686,4 @@ class _PetitionSection extends StatelessWidget {
     );
   }
 }
+
