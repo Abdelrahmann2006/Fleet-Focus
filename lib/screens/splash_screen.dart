@@ -203,8 +203,6 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
 
-                  // تم إزالة النص "ادخل إلى نظام التحكم..." من هنا
-
                   const Spacer(flex: 3),
 
                   // أزرار اختيار الأدوار
@@ -243,7 +241,6 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
 
                   const Spacer(flex: 1), // مسافة صغيرة في الأسفل
-                  // تم إزالة النص "اتصال آمن..." من هنا
                 ],
               ),
             ),
@@ -331,9 +328,8 @@ class _SplashScreenState extends State<SplashScreen>
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
-      }
-      
+}
