@@ -70,7 +70,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
 
-    // Auto-route if already logged in
+    // توجيه تلقائي إذا كان المستخدم مسجلاً بالفعل
     if (!auth.isLoading && auth.user != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final role = auth.user?.role;
@@ -91,7 +91,7 @@ class _SplashScreenState extends State<SplashScreen>
                 children: [
                   const Spacer(flex: 2),
 
-                  // Logo + title
+                  // الشعار + العنوان الجديد (Panopticon)
                   AnimatedBuilder(
                     animation: _logoController,
                     builder: (context, child) {
@@ -123,25 +123,25 @@ class _SplashScreenState extends State<SplashScreen>
                             ],
                           ),
                           child: const Icon(
-                            Icons.star_outline_rounded,
+                            Icons.visibility_outlined, // تغيير الأيقونة لتناسب Panopticon
                             size: 50,
                             color: AppColors.background,
                           ),
                         ),
                         const SizedBox(height: 28),
                         const Text(
-                          'نظام الالتزام',
+                          'Panopticon', // الاسم الجديد
                           style: TextStyle(
                             fontSize: 34,
                             fontWeight: FontWeight.w800,
                             color: AppColors.text,
                             fontFamily: 'Tajawal',
-                            letterSpacing: 1,
+                            letterSpacing: 2,
                           ),
                         ),
                         const SizedBox(height: 10),
                         const Text(
-                          'منصة متكاملة لإدارة العناصر',
+                          'منصة متكاملة لإدارة العناصر والالتزام الكامل',
                           style: TextStyle(
                             fontSize: 16,
                             color: AppColors.textSecondary,
@@ -155,7 +155,7 @@ class _SplashScreenState extends State<SplashScreen>
 
                   const Spacer(flex: 2),
 
-                  // Role selection buttons
+                  // أزرار اختيار الأدوار
                   AnimatedBuilder(
                     animation: _buttonsController,
                     builder: (context, child) {
@@ -166,7 +166,7 @@ class _SplashScreenState extends State<SplashScreen>
                     },
                     child: Column(
                       children: [
-                        // Leader button
+                        // زر السيدة
                         Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(18),
@@ -201,14 +201,14 @@ class _SplashScreenState extends State<SplashScreen>
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.end,
                                         children: [
-                                          Text('أنا السيدة',
+                                          Text('أنا السيدة', // تم التعديل
                                               style: TextStyle(
                                                 fontSize: 18,
                                                 fontWeight: FontWeight.w700,
                                                 color: AppColors.text,
                                                 fontFamily: 'Tajawal',
                                               )),
-                                          Text('إدارة العناصر والاستمارات',
+                                          Text('إدارة العناصر والاستمارات', // تم التعديل
                                               style: TextStyle(
                                                 fontSize: 13,
                                                 color: AppColors.textMuted,
@@ -228,7 +228,7 @@ class _SplashScreenState extends State<SplashScreen>
 
                         const SizedBox(height: 14),
 
-                        // Participant button
+                        // زر العنصر
                         Container(
                           decoration: BoxDecoration(
                             color: AppColors.backgroundCard,
@@ -265,14 +265,14 @@ class _SplashScreenState extends State<SplashScreen>
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.end,
                                         children: [
-                                          Text('أنا العنصر',
+                                          Text('أنا العنصر', // تم التعديل
                                               style: TextStyle(
                                                 fontSize: 18,
                                                 fontWeight: FontWeight.w700,
                                                 color: AppColors.text,
                                                 fontFamily: 'Tajawal',
                                               )),
-                                          Text('ملء استمارة الانضمام والولاء',
+                                          Text('ملء استمارة الانضمام والولاء', // تم التعديل
                                               style: TextStyle(
                                                 fontSize: 13,
                                                 color: AppColors.textMuted,
