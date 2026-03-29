@@ -686,20 +686,3 @@ class _PetitionSection extends StatelessWidget {
     );
   }
 }
-// ── Data Model (لحل مشكلة الـ Type) ──────────
-class JoinRequestLive {
-  final String uid;
-  final String name;
-  final String deviceModel;
-  final DateTime requestedAt;
-  final String status;
-
-  JoinRequestLive({
-    required this.uid,
-    required this.name,
-    required this.deviceModel,
-    required this.requestedAt,
-    required this.status,
-  });
-}
-
