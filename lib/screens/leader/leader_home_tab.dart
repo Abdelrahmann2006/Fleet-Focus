@@ -46,17 +46,9 @@ class _LeaderHomeTabState extends State<LeaderHomeTab> {
           builder: (context, partSnap) {
             final docs = partSnap.data?.docs ?? [];
             
-            // تحويل البيانات من Firestore إلى Model الخاص بالبطاقة
-            final List<ParticipantCardModel> allParticipants = docs.map<ParticipantCardModel>((doc) {
-              final d = doc.data() as Map<String, dynamic>;
-              return ParticipantCardModel(
-                uid: doc.id,
-                name: d['fullName'] ?? d['displayName'] ?? 'عنصر مجهول',
-                avatarUrl: d['photoURL'],
-                // تحويل الحالة من Firestore لقيم الـ Enum في التطبيق
-                livePulse: _mapStatusToPulse(d['applicationStatus']),
-                lastSeen: (d['last_seen'] as Timestamp?)?.toDate() ?? DateTime.now(),
-              );
+            // ── تحويل البيانات باستخدام الموديل الجديد (fromFirestore) ──
+            final List<ParticipantCardModel> allParticipants = docs.map((doc) {
+              return ParticipantCardModel.fromFirestore(doc.id, doc.data() as Map<String, dynamic>);
             }).toList();
 
             // تطبيق فلتر البحث
@@ -82,13 +74,6 @@ class _LeaderHomeTabState extends State<LeaderHomeTab> {
         );
       },
     );
-  }
-
-  // ── تحويل الحالة برمجياً ─────────────────────────────────────
-  LivePulse _mapStatusToPulse(String? status) {
-    if (status == 'approved_active') return LivePulse.active;
-    if (status == 'pending') return LivePulse.idle;
-    return LivePulse.offline;
   }
 
   // ── Top Bar ───────────────────────────────────────────────────
