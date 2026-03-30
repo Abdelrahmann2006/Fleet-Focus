@@ -1,9 +1,15 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../constants/colors.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/leader_ui_provider.dart';
 import '../../providers/participant_stream_provider.dart';
 import 'leader_home_tab.dart';
-import 'join_requests_screen.dart'; // ستعمل كمركز للإشعارات
+import 'join_requests_screen.dart'; // ستعمل كمركز للإشعارات بناءً على طلبك
 import 'leader_settings_screen.dart';
 
 class LeaderShell extends StatefulWidget {
@@ -18,7 +24,7 @@ class _LeaderShellState extends State<LeaderShell> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    // جلب عدد الطلبات المعلقة لإظهاره كإشعار (Badge) على الأيقونة
+    // جلب عدد الطلبات المعلقة من الـ Provider لإظهاره كإشعار (Badge)
     final pendingCount = context.watch<ParticipantStreamProvider>().pendingCount;
 
     return Scaffold(
@@ -26,17 +32,21 @@ class _LeaderShellState extends State<LeaderShell> with SingleTickerProviderStat
       body: IndexedStack(
         index: _currentIndex,
         children: [
-          // الخانة 0: الشاشة الرئيسية
+          // الخانة 0: الرئيسية
           LeaderHomeTab(isActive: _currentIndex == 0),
           
-          // الخانة 1: مركز الإشعارات (كانت شاشة الطلبات سابقاً)
+          // الخانة 1: الإشعارات (كانت "الطلبات" سابقاً)
           const JoinRequestsScreen(),
           
-          // الخانة 2: الدردشات (بديلة لشاشة التقارير)
+          // الخانة 2: الدردشات (كانت "التقارير" سابقاً)
           const Center(
             child: Text(
               'شاشة الدردشات قيد التطوير',
-              style: TextStyle(color: Colors.white, fontFamily: 'Tajawal', fontSize: 16),
+              style: TextStyle(
+                color: Colors.white, 
+                fontFamily: 'Tajawal', 
+                fontSize: 16
+              ),
             ),
           ),
           
@@ -44,6 +54,21 @@ class _LeaderShellState extends State<LeaderShell> with SingleTickerProviderStat
           const LeaderSettingsScreen(),
         ],
       ),
+      
+      // زر إضافة عنصر (يظهر فقط في التبويب الرئيسي)
+      floatingActionButton: _currentIndex == 0
+          ? FloatingActionButton.extended(
+              onPressed: () => _showGenerateCodeDialog(context),
+              backgroundColor: AppColors.accent,
+              foregroundColor: Colors.black,
+              icon: const Icon(Icons.add),
+              label: const Text(
+                'إضافة عنصر', 
+                style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Tajawal')
+              ),
+            )
+          : null,
+
       bottomNavigationBar: Container(
         height: 70,
         decoration: const BoxDecoration(
@@ -52,7 +77,7 @@ class _LeaderShellState extends State<LeaderShell> with SingleTickerProviderStat
         ),
         child: Row(
           children: [
-            // الرئيسية
+            // تبويب الرئيسية
             _NavItem(
               icon: Icons.home_outlined,
               activeIcon: Icons.home,
@@ -62,7 +87,7 @@ class _LeaderShellState extends State<LeaderShell> with SingleTickerProviderStat
               onTap: (i) => setState(() => _currentIndex = i),
             ),
             
-            // الإشعارات (مع الـ Badge للطلبات المعلقة)
+            // تبويب الإشعارات (مع عداد الطلبات)
             _NavItem(
               icon: Icons.notifications_none_outlined,
               activeIcon: Icons.notifications,
@@ -73,7 +98,7 @@ class _LeaderShellState extends State<LeaderShell> with SingleTickerProviderStat
               badge: pendingCount > 0 ? pendingCount : null,
             ),
             
-            // الدردشات (بديلة للتقارير)
+            // تبويب الدردشات (بديل التقارير)
             _NavItem(
               icon: Icons.chat_bubble_outline,
               activeIcon: Icons.chat_bubble,
@@ -83,7 +108,7 @@ class _LeaderShellState extends State<LeaderShell> with SingleTickerProviderStat
               onTap: (i) => setState(() => _currentIndex = i),
             ),
             
-            // الإعدادات
+            // تبويب الإعدادات
             _NavItem(
               icon: Icons.settings_outlined,
               activeIcon: Icons.settings,
@@ -97,8 +122,81 @@ class _LeaderShellState extends State<LeaderShell> with SingleTickerProviderStat
       ),
     );
   }
+
+  // دالة توليد كود انضمام جديد (بروتوكول السيدة)
+  void _showGenerateCodeDialog(BuildContext context) {
+    final code = Random().nextInt(899999) + 100000;
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.backgroundCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'كود انضمام جديد', 
+          textAlign: TextAlign.right, 
+          style: TextStyle(color: AppColors.text, fontFamily: 'Tajawal', fontWeight: FontWeight.bold)
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'شارك هذا الكود مع العنصر المراد ضمه للنظام. هذا الكود صالح للاستخدام مرة واحدة فقط.', 
+              textAlign: TextAlign.right,
+              style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Tajawal', fontSize: 13)
+            ),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+              decoration: BoxDecoration(
+                color: AppColors.background, 
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.accent.withOpacity(0.3))
+              ),
+              child: SelectableText(
+                '$code', 
+                style: const TextStyle(
+                  fontSize: 36, 
+                  fontWeight: FontWeight.w900, 
+                  color: AppColors.accent, 
+                  letterSpacing: 6,
+                  fontFamily: 'Courier'
+                )
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx), 
+            child: const Text('إغلاق', style: TextStyle(fontFamily: 'Tajawal', color: AppColors.textMuted))
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: '$code'));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('تم نسخ الكود إلى الحافظة', style: TextStyle(fontFamily: 'Tajawal')),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+            ),
+            icon: const Icon(Icons.copy_all, size: 18),
+            label: const Text('نسخ الكود', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Tajawal')),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
+// ويدجت أيقونة التنقل السفلي
 class _NavItem extends StatelessWidget {
   final IconData icon, activeIcon;
   final String label;
@@ -107,13 +205,13 @@ class _NavItem extends StatelessWidget {
   final int? badge;
 
   const _NavItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-    required this.index,
-    required this.currentIndex,
-    required this.onTap,
-    this.badge,
+    required this.icon, 
+    required this.activeIcon, 
+    required this.label, 
+    required this.index, 
+    required this.currentIndex, 
+    required this.onTap, 
+    this.badge
   });
 
   @override
@@ -129,44 +227,45 @@ class _NavItem extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Stack(
-              clipBehavior: Clip.none,
+              clipBehavior: Clip.none, 
               children: [
-                Icon(active ? activeIcon : icon, color: color, size: 22),
-                if (badge != null)
+                Icon(active ? activeIcon : icon, color: color, size: 24),
+                if (badge != null) 
                   Positioned(
-                    top: -4,
-                    right: -6,
+                    top: -5, 
+                    right: -8, 
                     child: Container(
-                      width: 16,
-                      height: 16,
+                      padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: AppColors.error,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.backgroundCard, width: 1.5),
-                      ),
+                        color: AppColors.error, 
+                        shape: BoxShape.circle, 
+                        border: Border.all(color: AppColors.backgroundCard, width: 2)
+                      ), 
+                      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
                       child: Center(
                         child: Text(
-                          '$badge',
+                          '$badge', 
                           style: const TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w900,
+                            fontSize: 10, 
+                            fontWeight: FontWeight.w900, 
                             color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
+                            fontFamily: 'Tajawal'
+                          )
+                        )
+                      )
+                    )
                   ),
-              ],
+              ]
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
             Text(
-              label,
+              label, 
               style: TextStyle(
-                fontSize: 10,
-                color: color,
-                fontWeight: active ? FontWeight.w700 : FontWeight.normal,
-                fontFamily: 'Tajawal',
-              ),
+                fontSize: 10, 
+                color: color, 
+                fontWeight: active ? FontWeight.w800 : FontWeight.w500, 
+                fontFamily: 'Tajawal'
+              )
             ),
           ],
         ),
