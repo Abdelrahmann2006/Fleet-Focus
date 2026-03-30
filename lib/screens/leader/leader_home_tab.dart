@@ -65,7 +65,7 @@ class _LeaderHomeTabState extends State<LeaderHomeTab> {
                     _buildTopBar(context, leaderData),
                     _buildSearchBar(context),
                     _buildStatsRow(allParticipants),
-                    Expanded(child: _buildGrid(context, filteredList)),
+                    Expanded(child: _buildListOrGrid(context, filteredList)), // تم تعديل اسم الدالة
                   ],
                 ),
               ),
@@ -192,8 +192,8 @@ class _LeaderHomeTabState extends State<LeaderHomeTab> {
     );
   }
 
-  // ── Grid / List ───────────────────────────────────────────────
-  Widget _buildGrid(BuildContext context, List<ParticipantCardModel> list) {
+  // ── Grid / List (التعديل الجذري هنا لحل مشكلة الأزرار) ─────────
+  Widget _buildListOrGrid(BuildContext context, List<ParticipantCardModel> list) {
     final provider = context.watch<LeaderUIProvider>();
 
     if (list.isEmpty) {
@@ -210,16 +210,31 @@ class _LeaderHomeTabState extends State<LeaderHomeTab> {
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 80),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: provider.gridView ? 2 : 1,
-        childAspectRatio: provider.gridView ? 0.78 : 3.5,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-      ),
+    // إذا كان العرض شبكي (Grid)
+    if (provider.gridView) {
+      return GridView.builder(
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 80),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          // قد تحتاج لتقليل هذا الرقم إذا كانت الأزرار مقصوصة في وضع الشبكة أيضاً
+          childAspectRatio: 0.55, 
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+        ),
+        itemCount: list.length,
+        itemBuilder: (_, i) => ParticipantCardWidget(p: list[i]),
+      );
+    } 
+    
+    // إذا كان العرض قائمة (List) - وهو الوضع الافتراضي في صورك
+    // استخدام ListView.builder يسمح للبطاقة بأخذ الارتفاع الذي تحتاجه (Wrap Content)
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 80), // مسافة من الأسفل لعدم تغطية الفلوتنج باتون
       itemCount: list.length,
-      itemBuilder: (_, i) => ParticipantCardWidget(p: list[i]),
+      itemBuilder: (_, i) => Padding(
+        padding: const EdgeInsets.only(bottom: 4.0),
+        child: ParticipantCardWidget(p: list[i]),
+      ),
     );
   }
 }
