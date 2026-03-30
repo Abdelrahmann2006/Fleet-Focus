@@ -7690,24 +7690,18 @@ class _GeminiAiTabState extends State<_GeminiAiTab> {
   }
 }
 // ─────────────────────────────────────────────────────────────────────
-// Tab 38: عرض الاستمارة المُرسلة (Application Form)
+// Widget: عرض الاستمارة المُرسلة مع نظام التنبيه وأزرار التحكم
 // ─────────────────────────────────────────────────────────────────────
-class _ApplicationFormTab extends StatelessWidget {
+class ApplicationFormProtocolView extends StatelessWidget {
   final String uid;
-  const _ApplicationFormTab({required this.uid});
+  const ApplicationFormProtocolView({super.key, required this.uid});
 
   @override
   Widget build(BuildContext context) {
-    if (uid.isEmpty) {
-      return const Center(
-        child: Text('اختر عنصراً لعرض استمارته',
-            style: TextStyle(color: AppColors.textMuted, fontFamily: 'Tajawal')),
-      );
-    }
+    if (uid.isEmpty) return const SizedBox.shrink();
 
     return StreamBuilder<DocumentSnapshot>(
-      // نقرأ البيانات من مجموعة participants كما برمجتها في ApplicationScreen
-      stream: FirebaseFirestore.instance.collection('participants').doc(uid).snapshots(),
+      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
       builder: (ctx, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: AppColors.accent));
@@ -7721,11 +7715,12 @@ class _ApplicationFormTab extends StatelessWidget {
 
         final data = snap.data!.data() as Map<String, dynamic>;
 
-        return ListView(
-          padding: const EdgeInsets.all(20),
+        return Column(
           children: [
-            const _SectionTitle('الاستمارة المُقدمة من العنصر'),
-            const SizedBox(height: 10),
+            const _Hdr(title: 'الاستمارة التفصيلية للعنصر', icon: Icons.assignment_ind),
+            const SizedBox(height: 16),
+            
+            // أقسام الاستمارة
             _buildSection('البيانات الأساسية', data['basic_info']),
             _buildSection('الصحة الجسدية', data['health_profile']),
             _buildSection('الصحة النفسية', data['psych_profile']),
@@ -7735,10 +7730,64 @@ class _ApplicationFormTab extends StatelessWidget {
             _buildSection('الموافقة المستنيرة', data['consent']),
             _buildSection('الخطوط الحمراء', data['red_lines']),
             _buildSection('التقييم النفسي المتقدم', data['advanced_psych']),
-            const SizedBox(height: 40),
+
+            const SizedBox(height: 30),
+
+            // ── أزرار التحكم في الطلب ──
+            Row(
+              children: [
+                // زر الرفض
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _handleAction(context, 'rejected'),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.redAccent),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    icon: const Icon(Icons.close, color: Colors.redAccent, size: 18),
+                    label: const Text('رفض الطلب', 
+                        style: TextStyle(color: Colors.redAccent, fontFamily: 'Tajawal', fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // زر الموافقة (يفتح صفحة الضبط)
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      // هنا يتم الانتقال لصفحة الضبط الجاهزة لديك
+                      // يمكنك استخدام Navigator أو context.push لفتح شاشة "مرسوم السيدة"
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('جاري فتح صفحة ضبط المرسوم...', style: TextStyle(fontFamily: 'Tajawal')))
+                      );
+                      // مثال: context.push('/leader/approval-setup/$uid');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.success,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 0,
+                    ),
+                    icon: const Icon(Icons.check, color: Colors.white, size: 18),
+                    label: const Text('موافقة وضبط', 
+                        style: TextStyle(color: Colors.white, fontFamily: 'Tajawal', fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 50),
           ],
         );
       },
+    );
+  }
+
+  // دالة لتحديث الحالة في حال الرفض السريع
+  Future<void> _handleAction(BuildContext context, String status) async {
+    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      'applicationStatus': status,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(status == 'rejected' ? 'تم رفض الطلب بنجاح' : 'تم تحديث الحالة'))
     );
   }
 
@@ -7761,15 +7810,32 @@ class _ApplicationFormTab extends StatelessWidget {
           Text(title, style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontFamily: 'Tajawal', fontSize: 14)),
           const Divider(color: AppColors.border),
           ...map.entries.map((e) {
-            final val = e.value?.toString() ?? '—';
-            if (val.isEmpty || val == 'false') return const SizedBox.shrink(); 
+            final val = e.value?.toString() ?? '';
+            if (e.key == 'is_completed') return const SizedBox.shrink(); 
+
+            // 🚩 منطق التنبيه: إذا كانت الإجابة "لا" أو الحقل فارغ
+            bool isWarning = val == 'false' || val.trim().isEmpty;
+            String displayVal = val == 'true' ? 'نعم' : (val == 'false' ? 'لا' : (val.isEmpty ? 'لم يتم الرد' : val));
+
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: Text(val == 'true' ? 'نعم' : val, textAlign: TextAlign.right, style: const TextStyle(color: AppColors.text, fontFamily: 'Tajawal', fontSize: 13))),
+                  Expanded(
+                    child: Text(
+                      displayVal, 
+                      textAlign: TextAlign.right, 
+                      style: TextStyle(
+                        // اللون الأحمر للأخطاء أو الإجابات السلبية، والأبيض للعادي
+                        color: isWarning ? Colors.redAccent : AppColors.text, 
+                        fontWeight: isWarning ? FontWeight.bold : FontWeight.normal,
+                        fontFamily: 'Tajawal', 
+                        fontSize: 13
+                      )
+                    )
+                  ),
                   const SizedBox(width: 8),
                   Text('${e.key}:', style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Tajawal', fontSize: 12)),
                 ],
@@ -7781,4 +7847,3 @@ class _ApplicationFormTab extends StatelessWidget {
     );
   }
 }
-
