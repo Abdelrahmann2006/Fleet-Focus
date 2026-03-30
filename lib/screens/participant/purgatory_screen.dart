@@ -1,13 +1,12 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 import '../../constants/colors.dart';
 import '../../providers/auth_provider.dart';
 
-/// شاشة المطهر — حالة الانتظار للمشارك قبل قبوله
-///
-/// مُغلقة تماماً — لا توجد أزرار للتنقل.
-/// تُعرض تلقائياً عندما applicationStatus == 'pending' أو غير معروف.
+[span_4](start_span)/// شاشة المطهر — حالة الانتظار للمشارك قبل قبوله[span_4](end_span)
 class PurgatoryScreen extends StatefulWidget {
   const PurgatoryScreen({super.key});
 
@@ -24,15 +23,13 @@ class _PurgatoryScreenState extends State<PurgatoryScreen>
   late Animation<double> _rotate;
   late Animation<double> _fade;
 
-  final List<_Particle> _particles = List.generate(
-    20,
-    (_) => _Particle(),
-  );
+  final List<_Particle> _particles = List.generate(20, (_) => _Particle());
 
   @override
   void initState() {
     super.initState();
 
+    [span_5](start_span)// ── إعداد الأنيميشن ──────────────────────────────────[span_5](end_span)
     _pulseCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2200),
@@ -52,6 +49,34 @@ class _PurgatoryScreenState extends State<PurgatoryScreen>
       duration: const Duration(milliseconds: 1200),
     )..forward();
     _fade = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
+
+    // 📡 البدء في مراقبة حالة الطلب للانتقال التلقائي
+    _listenToStatusUpdate();
+  }
+
+  /// مستمع لمراقبة تغيير حالة applicationStatus في Firestore
+  void _listenToStatusUpdate() {
+    final user = context.read<AuthProvider>().user;
+    if (user == null) return;
+
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .snapshots()
+        .listen((snap) {
+      if (snap.exists && mounted) {
+        final status = snap.data()?['applicationStatus'];
+
+        [span_6](start_span)// إذا وافقت السيدة، يتم توجيه العنصر لمرسوم القبول[span_6](end_span)
+        if (status == 'approved') {
+          context.go('/onboarding/countdown');
+        } 
+        // إذا تم الرفض، يعود لشاشة الدخول
+        else if (status == 'rejected') {
+          context.go('/participant/login');
+        }
+      }
+    });
   }
 
   @override
@@ -71,10 +96,9 @@ class _PurgatoryScreenState extends State<PurgatoryScreen>
       backgroundColor: const Color(0xFF06060F),
       body: Stack(
         children: [
-          // ── خلفية جسيمات ──────────────────────────────────
+          [span_7](start_span)// ── خلفية الجسيمات المتحركة ─────────────────────────[span_7](end_span)
           ..._particles.map((p) => _ParticleWidget(particle: p, ctrl: _pulseCtrl)),
 
-          // ── محتوى رئيسي ───────────────────────────────────
           SafeArea(
             child: FadeTransition(
               opacity: _fade,
@@ -84,7 +108,7 @@ class _PurgatoryScreenState extends State<PurgatoryScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // ── رمز الانتظار المتحرك ───────────────
+                      [span_8](start_span)// ── أيقونة الانتظار الذهبية ────────────────────[span_8](end_span)
                       AnimatedBuilder(
                         animation: Listenable.merge([_pulse, _rotate]),
                         builder: (_, __) => Transform.scale(
@@ -125,7 +149,7 @@ class _PurgatoryScreenState extends State<PurgatoryScreen>
 
                       const SizedBox(height: 40),
 
-                      // ── اسم المستخدم ───────────────────────
+                      [span_9](start_span)// ── اسم العنصر ───────────────────────────[span_9](end_span)
                       Text(
                         name,
                         style: const TextStyle(
@@ -139,7 +163,6 @@ class _PurgatoryScreenState extends State<PurgatoryScreen>
 
                       const SizedBox(height: 12),
 
-                      // ── العنوان ────────────────────────────
                       const Text(
                         'طلبك قيد المراجعة',
                         textAlign: TextAlign.center,
@@ -154,9 +177,9 @@ class _PurgatoryScreenState extends State<PurgatoryScreen>
 
                       const SizedBox(height: 16),
 
-                      // ── الوصف ──────────────────────────────
+                      // ── وصف الحالة المحدث ───────────────────────
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           color: AppColors.backgroundCard,
                           borderRadius: BorderRadius.circular(12),
@@ -165,10 +188,10 @@ class _PurgatoryScreenState extends State<PurgatoryScreen>
                           ),
                         ),
                         child: const Text(
-                          'ملفك الشخصي وصل إلى القائد وهو يراجعه الآن.\n\nهذه الشاشة ستتحدث تلقائياً عند البت في طلبك.\nلا تغلق التطبيق.',
+                          'وصل للسيدة و هي تراجعه الآن.\n\nهذه الشاشة ستتحدث تلقائياً عند البت في طلبك.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 15,
                             color: AppColors.textSecondary,
                             fontFamily: 'Tajawal',
                             height: 1.7,
@@ -178,31 +201,10 @@ class _PurgatoryScreenState extends State<PurgatoryScreen>
 
                       const SizedBox(height: 32),
 
-                      // ── نقاط انتظار متحركة ─────────────────
+                      [span_10](start_span)// ── نقاط الانتظار ─────────────────────────[span_10](end_span)
                       _WaitingDots(),
 
                       const SizedBox(height: 24),
-
-                      // ── تحذير ──────────────────────────────
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.lock_outline,
-                            size: 13,
-                            color: AppColors.textMuted,
-                          ),
-                          const SizedBox(width: 6),
-                          const Text(
-                            'التطبيق في وضع القفل حتى صدور القرار',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textMuted,
-                              fontFamily: 'Tajawal',
-                            ),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),
@@ -215,7 +217,7 @@ class _PurgatoryScreenState extends State<PurgatoryScreen>
   }
 }
 
-// ── Particle ──────────────────────────────────────────────────
+[span_11](start_span)// ── المكونات الفرعية (الجسيمات، الرسام، النقاط) ─────────────────────[span_11](end_span)
 
 class _Particle {
   final double x = Random().nextDouble();
@@ -252,8 +254,6 @@ class _ParticleWidget extends StatelessWidget {
   }
 }
 
-// ── Ring Painter ──────────────────────────────────────────────
-
 class _RingPainter extends CustomPainter {
   final double angle;
   const _RingPainter({required this.angle});
@@ -276,8 +276,6 @@ class _RingPainter extends CustomPainter {
   @override
   bool shouldRepaint(_RingPainter old) => old.angle != angle;
 }
-
-// ── Waiting Dots ──────────────────────────────────────────────
 
 class _WaitingDots extends StatefulWidget {
   @override
