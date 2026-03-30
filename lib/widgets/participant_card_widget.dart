@@ -5,8 +5,6 @@ import '../models/participant_card_model.dart';
 import '../providers/leader_ui_provider.dart';
 import '../constants/colors.dart';
 
-/// بطاقة المشارك الديناميكية
-/// تعرض الحقول المحددة في LeaderUIProvider فقط
 class ParticipantCardWidget extends StatelessWidget {
   final ParticipantCardModel p;
   const ParticipantCardWidget({super.key, required this.p});
@@ -15,55 +13,55 @@ class ParticipantCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final visibleFields = context.watch<LeaderUIProvider>().visibleFields;
 
-    // تم تغليف البطاقة بالكامل بـ GestureDetector لتفتح غرفة التحكم عند الضغط على أي مكان
-    return GestureDetector(
-      onTap: () => context.push('/leader/dpc?uid=${p.uid}'),
-      child: Container(
-        margin: const EdgeInsets.all(1),
-        decoration: BoxDecoration(
-          color: AppColors.backgroundCard,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: _pulseColor(p.livePulse).withOpacity(0.35)),
-          boxShadow: [
-            BoxShadow(
-              color: _pulseColor(p.livePulse).withOpacity(0.08),
-              blurRadius: 8,
-              spreadRadius: 0,
+    return Container(
+      margin: const EdgeInsets.all(1),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundCard,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _pulseColor(p.livePulse).withOpacity(0.35)),
+        boxShadow: [
+          BoxShadow(
+            color: _pulseColor(p.livePulse).withOpacity(0.08),
+            blurRadius: 8,
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── الجزء العلوي (يفتح الـ DPC عند الضغط عليه) ──
+          GestureDetector(
+            onTap: () => context.push('/leader/dpc?uid=${p.uid}'),
+            behavior: HitTestBehavior.opaque, // مهم جداً لالتقاط اللمسات
+            child: Column(
+              children: [
+                _buildHeader(context),
+                if (visibleFields.isNotEmpty) ...[
+                  const Divider(color: AppColors.border, height: 1),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+                    child: _buildFieldsGrid(visibleFields),
+                  ),
+                ],
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // ── Header ────────────────────────────────────────────
-            _buildHeader(context),
+          ),
 
-            // ── Fields Grid ───────────────────────────────────────
-            if (visibleFields.isNotEmpty) ...[
-              const Divider(color: AppColors.border, height: 1),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
-                child: _buildFieldsGrid(visibleFields),
-              ),
-            ],
-
-            // ── Footer: Task Progress + Control Buttons ────────
-            _buildFooter(context, visibleFields),
-          ],
-        ),
+          // ── الأزرار السفلية (خارج الـ GestureDetector لتعمل بشكل مستقل) ──
+          _buildFooter(context, visibleFields),
+        ],
       ),
     );
   }
 
   // ── Header ────────────────────────────────────────────────────
-
   Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 12, 10, 8),
       child: Row(
         children: [
-          const Spacer(), // تم إزالة الزر الصغير من هنا لترتيب التصميم
-          // اسم + كود + رتبة
+          const Spacer(),
           Flexible(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -100,7 +98,6 @@ class ParticipantCardWidget extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          // الأفاتار
           _Avatar(name: p.name, pulse: p.livePulse),
         ],
       ),
@@ -108,7 +105,6 @@ class ParticipantCardWidget extends StatelessWidget {
   }
 
   // ── Dynamic Fields Grid ───────────────────────────────────────
-
   Widget _buildFieldsGrid(Set<String> visible) {
     final chips = <Widget>[];
     for (final f in CardField.all) {
@@ -131,17 +127,9 @@ class ParticipantCardWidget extends StatelessWidget {
         if (p.batteryPercent == null) return null;
         final pct = p.batteryPercent!;
         return _DataChip(
-          icon: pct > 50
-              ? Icons.battery_full
-              : pct > 20
-                  ? Icons.battery_4_bar
-                  : Icons.battery_alert,
+          icon: pct > 50 ? Icons.battery_full : pct > 20 ? Icons.battery_4_bar : Icons.battery_alert,
           label: '$pct%',
-          color: pct > 50
-              ? AppColors.success
-              : pct > 20
-                  ? AppColors.warning
-                  : AppColors.error,
+          color: pct > 50 ? AppColors.success : pct > 20 ? AppColors.warning : AppColors.error,
         );
       case 'batteryHealth':
         if (p.batteryHealth == null) return null;
@@ -236,9 +224,7 @@ class ParticipantCardWidget extends StatelessWidget {
       case 'deviceOrientation':
         if (p.deviceOrientation == null) return null;
         return _DataChip(
-          icon: p.deviceOrientation! == OrientationMode.portrait
-              ? Icons.stay_current_portrait
-              : Icons.stay_current_landscape,
+          icon: p.deviceOrientation! == OrientationMode.portrait ? Icons.stay_current_portrait : Icons.stay_current_landscape,
           label: p.deviceOrientation! == OrientationMode.portrait ? 'عمودي' : 'أفقي',
           color: AppColors.textSecondary,
         );
@@ -314,9 +300,7 @@ class ParticipantCardWidget extends StatelessWidget {
       case 'antiCheatStatus':
         if (p.antiCheatStatus == null) return null;
         return _DataChip(
-          icon: p.antiCheatStatus! == AntiCheatStatus.clean
-              ? Icons.verified_outlined
-              : Icons.gpp_bad_outlined,
+          icon: p.antiCheatStatus! == AntiCheatStatus.clean ? Icons.verified_outlined : Icons.gpp_bad_outlined,
           label: _cheatLabel(p.antiCheatStatus!),
           color: _cheatColor(p.antiCheatStatus!),
         );
@@ -346,9 +330,7 @@ class ParticipantCardWidget extends StatelessWidget {
       case 'classification':
         if (p.classification == null) return null;
         return _DataChip(
-          icon: p.classification! == Classification.resident
-              ? Icons.home_outlined
-              : Icons.directions_bus_outlined,
+          icon: p.classification! == Classification.resident ? Icons.home_outlined : Icons.directions_bus_outlined,
           label: p.classification! == Classification.resident ? 'مقيم' : 'وافد',
           color: const Color(0xFF9F7AEA),
         );
@@ -422,7 +404,6 @@ class ParticipantCardWidget extends StatelessWidget {
   }
 
   // ── Footer: الزرين (التحكم الكامل والتحكم السريع) ────────────
-
   Widget _buildFooter(BuildContext context, Set<String> visible) {
     final showProgress = visible.contains('taskProgress') && p.taskProgress != null;
     return Container(
@@ -458,7 +439,7 @@ class ParticipantCardWidget extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: () => context.push('/leader/dpc?uid=${p.uid}'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFC9A84C), // لون ذهبي لتمييزه
+                backgroundColor: const Color(0xFFC9A84C), 
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -494,7 +475,6 @@ class ParticipantCardWidget extends StatelessWidget {
   }
 
   // ── Helper: Colors / Labels / Icons ──────────────────────────
-
   Color _pulseColor(LivePulse p) {
     switch (p) {
       case LivePulse.active:  return AppColors.success;
@@ -503,17 +483,9 @@ class ParticipantCardWidget extends StatelessWidget {
     }
   }
 
-  Color _gradeColor(int v) => v >= 70
-      ? AppColors.success
-      : v >= 40
-          ? AppColors.warning
-          : AppColors.error;
+  Color _gradeColor(int v) => v >= 70 ? AppColors.success : v >= 40 ? AppColors.warning : AppColors.error;
 
-  Color _stressColor(int v) => v < 40
-      ? AppColors.success
-      : v < 70
-          ? AppColors.warning
-          : AppColors.error;
+  Color _stressColor(int v) => v < 40 ? AppColors.success : v < 70 ? AppColors.warning : AppColors.error;
 
   String _batteryHealthLabel(BatteryHealth h) {
     switch (h) {
@@ -542,7 +514,7 @@ class ParticipantCardWidget extends StatelessWidget {
     }
   }
 
-    String _presenceLabel(PhysicalPresence p) {
+  String _presenceLabel(PhysicalPresence p) {
     switch (p) {
       case PhysicalPresence.indoor:  return 'داخلي';
       case PhysicalPresence.outdoor: return 'خارجي';
@@ -559,7 +531,7 @@ class ParticipantCardWidget extends StatelessWidget {
     }
   }
 
-  String _activityLabel(ActivityState a) {
+    String _activityLabel(ActivityState a) {
     switch (a) {
       case ActivityState.active:   return 'نشط';
       case ActivityState.idle:     return 'خامل';
@@ -664,7 +636,6 @@ class ParticipantCardWidget extends StatelessWidget {
 }
 
 // ── Reusable Sub-Widgets ──────────────────────────────────────
-
 class _PulseDot extends StatelessWidget {
   final LivePulse pulse;
   const _PulseDot({required this.pulse});
@@ -785,3 +756,5 @@ class _MiniChip extends StatelessWidget {
     );
   }
 }
+
+   
