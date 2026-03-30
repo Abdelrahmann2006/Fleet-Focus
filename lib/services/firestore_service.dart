@@ -79,7 +79,7 @@ class FirestoreService {
     return _fs
         .collection('users')
         .where('role', isEqualTo: 'participant')
-        .where('applicationStatus', isEqualTo: 'pending')
+        .where('applicationStatus', isEqualTo: 'submitted')
         .snapshots()
         .map((snap) =>
             snap.docs.map((d) => {'uid': d.id, ...d.data()}).toList());
