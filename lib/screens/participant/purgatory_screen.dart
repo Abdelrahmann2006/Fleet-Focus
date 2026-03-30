@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../constants/colors.dart';
 import '../../providers/auth_provider.dart';
 
-[span_4](start_span)/// شاشة المطهر — حالة الانتظار للمشارك قبل قبوله[span_4](end_span)
+/// شاشة المطهر — حالة الانتظار للمشارك قبل قبوله
 class PurgatoryScreen extends StatefulWidget {
   const PurgatoryScreen({super.key});
 
@@ -29,7 +29,7 @@ class _PurgatoryScreenState extends State<PurgatoryScreen>
   void initState() {
     super.initState();
 
-    [span_5](start_span)// ── إعداد الأنيميشن ──────────────────────────────────[span_5](end_span)
+    // ── إعداد الأنيميشن ──────────────────────────────────
     _pulseCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2200),
@@ -67,7 +67,7 @@ class _PurgatoryScreenState extends State<PurgatoryScreen>
       if (snap.exists && mounted) {
         final status = snap.data()?['applicationStatus'];
 
-        [span_6](start_span)// إذا وافقت السيدة، يتم توجيه العنصر لمرسوم القبول[span_6](end_span)
+        // إذا وافقت السيدة، يتم توجيه العنصر لمرسوم القبول
         if (status == 'approved') {
           context.go('/onboarding/countdown');
         } 
@@ -96,7 +96,7 @@ class _PurgatoryScreenState extends State<PurgatoryScreen>
       backgroundColor: const Color(0xFF06060F),
       body: Stack(
         children: [
-          [span_7](start_span)// ── خلفية الجسيمات المتحركة ─────────────────────────[span_7](end_span)
+          // ── خلفية الجسيمات المتحركة ─────────────────────────
           ..._particles.map((p) => _ParticleWidget(particle: p, ctrl: _pulseCtrl)),
 
           SafeArea(
@@ -108,7 +108,7 @@ class _PurgatoryScreenState extends State<PurgatoryScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      [span_8](start_span)// ── أيقونة الانتظار الذهبية ────────────────────[span_8](end_span)
+                      // ── أيقونة الانتظار الذهبية ────────────────────
                       AnimatedBuilder(
                         animation: Listenable.merge([_pulse, _rotate]),
                         builder: (_, __) => Transform.scale(
@@ -149,7 +149,7 @@ class _PurgatoryScreenState extends State<PurgatoryScreen>
 
                       const SizedBox(height: 40),
 
-                      [span_9](start_span)// ── اسم العنصر ───────────────────────────[span_9](end_span)
+                      // ── اسم العنصر ───────────────────────────
                       Text(
                         name,
                         style: const TextStyle(
@@ -201,7 +201,7 @@ class _PurgatoryScreenState extends State<PurgatoryScreen>
 
                       const SizedBox(height: 32),
 
-                      [span_10](start_span)// ── نقاط الانتظار ─────────────────────────[span_10](end_span)
+                      // ── نقاط الانتظار ─────────────────────────
                       _WaitingDots(),
 
                       const SizedBox(height: 24),
@@ -217,7 +217,7 @@ class _PurgatoryScreenState extends State<PurgatoryScreen>
   }
 }
 
-[span_11](start_span)// ── المكونات الفرعية (الجسيمات، الرسام، النقاط) ─────────────────────[span_11](end_span)
+// ── المكونات الفرعية (الجسيمات، الرسام، النقاط) ─────────────────────
 
 class _Particle {
   final double x = Random().nextDouble();
