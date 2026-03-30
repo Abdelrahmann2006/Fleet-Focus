@@ -1058,6 +1058,9 @@ class _DpcCommandCenterScreenState extends State<DpcCommandCenterScreen>
           ),
         ),
 
+        // 🔴 ضيف استدعاء تبويب الاستمارة هنا 🔴
+        _ApplicationFormTab(uid: _selectedUid),
+        
         // ── Tab 22: Network Enforcement (VPN + URL + Mutiny + Red Overlay) ──
         _NetworkEnforcementTab(
           deviceState: _deviceState,
@@ -7687,6 +7690,112 @@ class _GeminiAiTabState extends State<_GeminiAiTab> {
           ),
         ]),
       ),
-    ]);
+    ])
+      
+  }
+}
+// ─────────────────────────────────────────────────────────────────────
+// تبويب الاستمارة المستقل (Application Form Tab)
+// ─────────────────────────────────────────────────────────────────────
+class _ApplicationFormTab extends StatelessWidget {
+  final String uid;
+  const _ApplicationFormTab({required this.uid});
+
+  @override
+  Widget build(BuildContext context) {
+    if (uid.isEmpty) {
+      return const Center(child: Text('يرجى اختيار عنصر لعرض استمارته', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Tajawal')));
+    }
+
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+      builder: (ctx, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+        }
+        if (!snap.hasData || !snap.data!.exists) {
+          return const Center(child: Text('لا توجد استمارة لهذا العنصر', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Tajawal')));
+        }
+
+        final data = snap.data!.data() as Map<String, dynamic>;
+
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text('استمارة التقدم الخاصة بالعنصر', 
+                  style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'Tajawal')),
+                SizedBox(width: 8),
+                Icon(Icons.assignment_ind_outlined, color: AppColors.accent, size: 20),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            // عرض أقسام الاستمارة
+            _buildAppSection('البيانات الأساسية', data['basic_info']),
+            _buildAppSection('الصحة الجسدية', data['health_profile']),
+            _buildAppSection('الصحة النفسية', data['psych_profile']),
+            _buildAppSection('المهارات والقدرات', data['skills']),
+            _buildAppSection('الوضع الاجتماعي', data['socioeconomic']),
+            _buildAppSection('التاريخ السلوكي', data['behavioral']),
+            _buildAppSection('الموافقة المستنيرة', data['consent']),
+            _buildAppSection('الخطوط الحمراء', data['red_lines']),
+            _buildAppSection('التحليل النفسي المتقدم', data['advanced_psych']),
+            
+            const SizedBox(height: 40),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAppSection(String title, dynamic sectionData) {
+    if (sectionData == null || sectionData is! Map) return const SizedBox.shrink();
+    final map = sectionData as Map<String, dynamic>;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundCard,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: ExpansionTile(
+        title: Text(title, style: const TextStyle(color: AppColors.gold, fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'Tajawal')),
+        childrenPadding: const EdgeInsets.only(bottom: 10, left: 10, right: 10),
+        expandedAlignment: Alignment.centerRight,
+        children: map.entries.map((e) {
+          if (e.key == 'is_completed') return const SizedBox.shrink();
+          
+          final val = e.value?.toString() ?? '';
+          // تلوين الأخطاء بالأحمر
+          bool isCritical = val == 'false' || val.trim().isEmpty;
+          String displayVal = val == 'true' ? 'نعم' : (val == 'false' ? 'لا' : (val.isEmpty ? 'غير محدد' : val));
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(displayVal, 
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      color: isCritical ? Colors.redAccent : AppColors.text, 
+                      fontWeight: isCritical ? FontWeight.bold : FontWeight.normal,
+                      fontSize: 12, fontFamily: 'Tajawal'
+                    ))
+                ),
+                const SizedBox(width: 10),
+                Text('${e.key}:', style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Tajawal')),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
   }
 }
