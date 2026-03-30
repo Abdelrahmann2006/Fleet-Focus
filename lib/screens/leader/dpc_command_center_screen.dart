@@ -7689,3 +7689,96 @@ class _GeminiAiTabState extends State<_GeminiAiTab> {
     ]);
   }
 }
+// ─────────────────────────────────────────────────────────────────────
+// Tab 38: عرض الاستمارة المُرسلة (Application Form)
+// ─────────────────────────────────────────────────────────────────────
+class _ApplicationFormTab extends StatelessWidget {
+  final String uid;
+  const _ApplicationFormTab({required this.uid});
+
+  @override
+  Widget build(BuildContext context) {
+    if (uid.isEmpty) {
+      return const Center(
+        child: Text('اختر عنصراً لعرض استمارته',
+            style: TextStyle(color: AppColors.textMuted, fontFamily: 'Tajawal')),
+      );
+    }
+
+    return StreamBuilder<DocumentSnapshot>(
+      // نقرأ البيانات من مجموعة participants كما برمجتها في ApplicationScreen
+      stream: FirebaseFirestore.instance.collection('participants').doc(uid).snapshots(),
+      builder: (ctx, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+        }
+        if (!snap.hasData || !snap.data!.exists) {
+          return const Center(
+            child: Text('لم يتم العثور على استمارة لهذا العنصر',
+                style: TextStyle(color: AppColors.textMuted, fontFamily: 'Tajawal')),
+          );
+        }
+
+        final data = snap.data!.data() as Map<String, dynamic>;
+
+        return ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            const _SectionTitle('الاستمارة المُقدمة من العنصر'),
+            const SizedBox(height: 10),
+            _buildSection('البيانات الأساسية', data['basic_info']),
+            _buildSection('الصحة الجسدية', data['health_profile']),
+            _buildSection('الصحة النفسية', data['psych_profile']),
+            _buildSection('المهارات والقدرات', data['skills']),
+            _buildSection('الوضع الاجتماعي', data['socioeconomic']),
+            _buildSection('السلوك والتاريخ', data['behavioral']),
+            _buildSection('الموافقة المستنيرة', data['consent']),
+            _buildSection('الخطوط الحمراء', data['red_lines']),
+            _buildSection('التقييم النفسي المتقدم', data['advanced_psych']),
+            const SizedBox(height: 40),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSection(String title, dynamic sectionData) {
+    if (sectionData == null || sectionData is! Map) return const SizedBox.shrink();
+    final map = sectionData as Map<String, dynamic>;
+    if (map.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundCard,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(title, style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontFamily: 'Tajawal', fontSize: 14)),
+          const Divider(color: AppColors.border),
+          ...map.entries.map((e) {
+            final val = e.value?.toString() ?? '—';
+            if (val.isEmpty || val == 'false') return const SizedBox.shrink(); 
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: Text(val == 'true' ? 'نعم' : val, textAlign: TextAlign.right, style: const TextStyle(color: AppColors.text, fontFamily: 'Tajawal', fontSize: 13))),
+                  const SizedBox(width: 8),
+                  Text('${e.key}:', style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Tajawal', fontSize: 12)),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
