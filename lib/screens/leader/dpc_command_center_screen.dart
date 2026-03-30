@@ -7690,7 +7690,7 @@ class _GeminiAiTabState extends State<_GeminiAiTab> {
           ),
         ]),
       ),
-    ])
+    ]);
       
   }
 }
