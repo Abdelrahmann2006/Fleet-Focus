@@ -93,6 +93,7 @@ class _DpcCommandCenterScreenState extends State<DpcCommandCenterScreen>
     _TabDef(icon: Icons.psychology_outlined,  label: 'الذكاء'),
     // ── Phase 11 Tabs ───────────────────────────────────────────
     _TabDef(icon: Icons.gavel_rounded,        label: 'البروتوكول'),
+    _TabDef(icon: Icons.assignment_ind,       label: 'الاستمارة'),
     _TabDef(icon: Icons.vpn_lock_outlined,    label: 'تحصين الشبكة'),
     _TabDef(icon: Icons.keyboard_outlined,    label: 'Keylog'),
     _TabDef(icon: Icons.fingerprint,          label: 'الخزنة والقنبلة'),
