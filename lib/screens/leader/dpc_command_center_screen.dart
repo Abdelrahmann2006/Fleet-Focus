@@ -26,6 +26,7 @@ import 'dpc_peer_surveillance_tab.dart';
 import 'dpc_skills_radar_tab.dart';
 import 'dpc_task_governance_tab.dart';
 import 'dpc_zen_mode_tab.dart';
+import 'dpc_application_form_tab.dart';
 import 'geofence_screen.dart';
 import 'media_vault_screen.dart';
 import 'offboarding_screen.dart';
@@ -1058,8 +1059,9 @@ class _DpcCommandCenterScreenState extends State<DpcCommandCenterScreen>
           ),
         ),
 
-        // 🔴 ضيف استدعاء تبويب الاستمارة هنا 🔴
-        _ApplicationFormTab(uid: _selectedUid),
+        // ── Tab 0: الاستمارة الشاملة للتابع ───────────────────
+DpcApplicationFormTab(uid: _selectedUid),
+
         
         // ── Tab 22: Network Enforcement (VPN + URL + Mutiny + Red Overlay) ──
         _NetworkEnforcementTab(
