@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../constants/colors.dart';
 
+/// تبويب عرض الاستمارة الشاملة داخل غرفة التحكم (DPC)
 class DpcApplicationFormTab extends StatelessWidget {
   final String uid;
 
   const DpcApplicationFormTab({super.key, required this.uid});
 
+  // تعريف الأقسام العشرة للاستمارة مع أيقوناتها وألوانها المميزة
   static const Map<String, _SectionMeta> _sectionsMeta = {
     'basic_info': _SectionMeta('البيانات الأساسية', Icons.person_outline, Color(0xFFC9A84C)),
     'health_profile': _SectionMeta('الصحة الجسدية', Icons.favorite_outline, Color(0xFFE53E3E)),
@@ -66,7 +68,6 @@ class DpcApplicationFormTab extends StatelessWidget {
   }
 
   Widget _buildHeader(Map<String, dynamic> data) {
-    final status = data['applicationStatus'] ?? 'مجهول';
     final submittedAt = (data['submittedAt'] as Timestamp?)?.toDate();
 
     return Container(
@@ -92,7 +93,9 @@ class DpcApplicationFormTab extends StatelessWidget {
                 const Text('الاستمارة الشاملة للتابع',
                     style: TextStyle(color: AppColors.text, fontFamily: 'Tajawal', fontWeight: FontWeight.w800, fontSize: 16)),
                 const SizedBox(height: 4),
-                Text(submittedAt != null ? 'تاريخ التقديم: ${submittedAt.day}/${submittedAt.month}/${submittedAt.year}' : 'تاريخ التقديم: غير متوفر',
+                Text(submittedAt != null 
+                    ? 'تاريخ التقديم: ${submittedAt.day}/${submittedAt.month}/${submittedAt.year}' 
+                    : 'تاريخ التقديم: غير متوفر',
                     style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Tajawal', fontSize: 12)),
               ],
             ),
@@ -103,7 +106,8 @@ class DpcApplicationFormTab extends StatelessWidget {
               color: AppColors.success.withOpacity(0.15),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Text('مقبولة', style: TextStyle(color: AppColors.success, fontFamily: 'Tajawal', fontWeight: FontWeight.bold, fontSize: 12)),
+            child: const Text('مقبولة', 
+                style: TextStyle(color: AppColors.success, fontFamily: 'Tajawal', fontWeight: FontWeight.bold, fontSize: 12)),
           )
         ],
       ),
@@ -121,18 +125,20 @@ class DpcApplicationFormTab extends StatelessWidget {
           iconColor: meta.color,
           collapsedIconColor: meta.color,
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          // تم تصحيح البارامتر هنا من border إلى side
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: meta.color.withOpacity(0.5)),
+            side: BorderSide(color: meta.color.withOpacity(0.5)),
           ),
           collapsedShape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
+            side: const BorderSide(color: AppColors.border),
           ),
           title: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Text(meta.title, style: TextStyle(color: meta.color, fontFamily: 'Tajawal', fontWeight: FontWeight.w800, fontSize: 14)),
+              Text(meta.title, 
+                  style: TextStyle(color: meta.color, fontFamily: 'Tajawal', fontWeight: FontWeight.w800, fontSize: 14)),
               const SizedBox(width: 10),
               Icon(meta.icon, color: meta.color, size: 20),
             ],
@@ -155,7 +161,6 @@ class DpcApplicationFormTab extends StatelessWidget {
   }
 
   Widget _buildDataRow(String key, dynamic value) {
-    // تحسين عرض القوائم إذا كانت الإجابة عبارة عن قائمة خيارات
     String displayValue = value.toString();
     if (value is List) {
       displayValue = value.join(' ، ');
