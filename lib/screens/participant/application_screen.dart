@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../constants/colors.dart';
+import '../../services/firestore_service.dart'; // تمت إضافة استدعاء الـ FirestoreService
+
 import '../form/section1_basic_info.dart';
 import '../form/section2_health_profile.dart';
 import '../form/section3_psych_profile.dart';
@@ -58,7 +60,8 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
     if (uid == null) return;
     setState(() => _saving = true);
     try {
-      await FirebaseFirestore.instance.collection('participants').doc(uid).set({
+      // تم التعديل إلى users لتتوافق مع هيكلة النظام
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
         ..._formData,
         'lastUpdated': FieldValue.serverTimestamp(),
         'completedSections': _currentSection + 1,
@@ -71,17 +74,54 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
   }
 
   Future<void> _submitForm() async {
-    final uid = context.read<AuthProvider>().user?.uid;
+    final user = context.read<AuthProvider>().user;
+    final uid = user?.uid;
     if (uid == null) return;
+    
     setState(() => _saving = true);
     try {
-      await FirebaseFirestore.instance.collection('participants').doc(uid).set({
+      // 1. حفظ بيانات التابع (في مجموعة users لتوحيد البيانات بناءً على firestore_service)
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
         ..._formData,
         'submittedAt': FieldValue.serverTimestamp(),
-        'status': 'submitted',
+        'applicationStatus': 'submitted',
         'completedSections': 10,
       }, SetOptions(merge: true));
+      
       await context.read<AuthProvider>().updateApplicationStatus('submitted');
+
+      // 2. إرسال الاستمارة كـ "إشعار" إلى السيدة
+      // جلب كود القائد المرتبط بهذا التابع لإرسال الإشعار له
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final leaderCode = userDoc.data()?['linkedLeaderCode'] ?? '';
+
+      if (leaderCode.isNotEmpty) {
+        // البحث عن السيدة صاحبة هذا الكود
+        final leaderQuery = await FirebaseFirestore.instance
+            .collection('users')
+            .where('leaderCode', isEqualTo: leaderCode)
+            .where('role', isEqualTo: 'leader')
+            .limit(1)
+            .get();
+
+        if (leaderQuery.docs.isNotEmpty) {
+          final leaderUid = leaderQuery.docs.first.id;
+          final senderName = user?.fullName ?? 'عنصر جديد';
+
+          // استدعاء دالة الإشعارات الجديدة
+          await FirestoreService().sendNotification(
+            leaderUid: leaderUid,
+            senderUid: uid,
+            senderName: senderName,
+            type: 'form', // تحديد نوع الإشعار كاستمارة
+            title: 'استمارة انضمام جديدة',
+            body: 'أرسل $senderName استمارة التقييم الشاملة (10 أقسام). بانتظار المراجعة والقرار.',
+            payload: _formData, // تضمين كافة إجابات الاستمارة داخل الإشعار
+          );
+        }
+      }
+
+      // 3. عرض رسالة النجاح
       if (mounted) {
         showDialog(
           context: context,
@@ -96,7 +136,7 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.text, fontFamily: 'Tajawal'),
                   textAlign: TextAlign.center),
               SizedBox(height: 8),
-              Text('سيتم مراجعتها من قِبل قائدك قريباً.',
+              Text('تم رفع الاستمارة إلى غرفة التحكم. سيتم مراجعتها من قِبل القيادة قريباً.',
                   style: TextStyle(fontSize: 14, color: AppColors.textSecondary, fontFamily: 'Tajawal'),
                   textAlign: TextAlign.center),
             ]),
@@ -116,7 +156,7 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('خطأ في الإرسال. حاول مرة أخرى.'), backgroundColor: AppColors.error),
+          const SnackBar(content: Text('خطأ في الإرسال. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.'), backgroundColor: AppColors.error),
         );
       }
     } finally {
