@@ -1,21 +1,10 @@
-// ════════════════════════════════════════════════════════════════════════
-//  ملف firebase_options.dart يجب توليده عبر FlutterFire CLI
-//  لا تملأ هذه القيم يدوياً — شغّل الأمر التالي في مجلد المشروع:
-//
-//  1) dart pub global activate flutterfire_cli
-//  2) flutterfire configure --project=panopticon-afbec
-//
-//  ستُنشأ هذا الملف تلقائياً بعد إضافة google-services.json
-//  إلى android/app/
-// ════════════════════════════════════════════════════════════════════════
-
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
-    if (kIsWeb) throw UnsupportedError('Web not supported');
+    if (kIsWeb) return web;
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return android;
@@ -26,9 +15,16 @@ class DefaultFirebaseOptions {
     }
   }
 
-  // ══════════════════════════════════════════════
-  //  استبدل هذه القيم بما يُولّده FlutterFire CLI
-  // ══════════════════════════════════════════════
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyBWKCvAH2_hYbE5_jtQbK2OQg2eWdN_8po',
+    appId: '1:80732158852:web:d15ddb687451798476fbd1',
+    messagingSenderId: '80732158852',
+    projectId: 'panopticon-afbec',
+    storageBucket: 'panopticon-afbec.firebasestorage.app',
+    databaseURL: 'https://panopticon-afbec-default-rtdb.firebaseio.com',
+    authDomain: 'panopticon-afbec.firebaseapp.com',
+  );
+
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBWKCvAH2_hYbE5_jtQbK2OQg2eWdN_8po',
     appId: '1:80732158852:android:d15ddb687451798476fbd1',
