@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../constants/colors.dart';
 import '../../services/permission_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+
 
 // ───────────────────────────────────────────────────────────────
 // نموذج إذن واحد
@@ -459,7 +463,22 @@ class _PermissionsFlowScreenState extends State<PermissionsFlowScreen>
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => context.go('/participant/device-setup'),
+                onPressed: () async {
+  // 1. إخبار السيدة فوراً أن الجهاز أصبح تحت السيطرة وتم سحب الصلاحيات
+  final uid = context.read<AuthProvider>().user?.uid;
+  if (uid != null) {
+    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      'applicationStatus': 'approved_active', 
+      'joinedAt': FieldValue.serverTimestamp(),
+    });
+  }
+  
+  // 2. الانتقال للخطوة التالية
+  if (context.mounted) {
+    context.go('/participant/device-setup');
+  }
+},
+
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.success,
                   padding: const EdgeInsets.symmetric(vertical: 16),
