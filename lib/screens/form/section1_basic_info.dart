@@ -202,11 +202,41 @@ class _Section1BasicInfoState extends State<Section1BasicInfo> {
         // ── البيانات الأساسية ─────────────────────────────────────
         _sub('البيانات الشخصية'),
         const SizedBox(height: 12),
-        GoldInput(
-          label: 'تاريخ الميلاد',
-          controller: _birthDateCtrl,
-          hint: 'YYYY-MM-DD  مثال: 1995-06-15',
-          keyboardType: TextInputType.datetime,
+        // تاريخ الميلاد — يفتح تقويم
+        GestureDetector(
+          onTap: () async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: DateTime(2000),
+              firstDate: DateTime(1950),
+              lastDate: DateTime.now().subtract(const Duration(days: 365 * 15)),
+              locale: const Locale('ar'),
+              builder: (ctx, child) => Theme(
+                data: Theme.of(ctx).copyWith(
+                  colorScheme: const ColorScheme.dark(
+                    primary: AppColors.accent,
+                    onPrimary: Colors.black,
+                    surface: AppColors.backgroundCard,
+                    onSurface: AppColors.text,
+                  ),
+                ),
+                child: child!,
+              ),
+            );
+            if (picked != null) {
+              _birthDateCtrl.text =
+                  '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+            }
+          },
+          child: AbsorbPointer(
+            child: GoldInput(
+              label: 'تاريخ الميلاد *',
+              controller: _birthDateCtrl,
+              hint: 'اضغط لاختيار التاريخ',
+              prefixIcon: const Icon(Icons.calendar_today_outlined,
+                  color: AppColors.textMuted, size: 18),
+            ),
+          ),
         ),
         if (_computedAge > 0) ...[
           const SizedBox(height: 4),

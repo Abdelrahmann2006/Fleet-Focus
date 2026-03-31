@@ -7,9 +7,11 @@ class GoldInput extends StatefulWidget {
   final TextEditingController? controller;
   final bool obscureText;
   final Widget? prefixIcon;
+  final Widget? suffixIcon;
   final String? errorText;
   final TextInputType? keyboardType;
   final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
   final int? maxLength;
   final TextCapitalization textCapitalization;
   final int maxLines;
@@ -21,9 +23,11 @@ class GoldInput extends StatefulWidget {
     this.controller,
     this.obscureText = false,
     this.prefixIcon,
+    this.suffixIcon,
     this.errorText,
     this.keyboardType,
     this.onChanged,
+    this.onSubmitted,
     this.maxLength,
     this.textCapitalization = TextCapitalization.none,
     this.maxLines = 1,
@@ -62,6 +66,7 @@ class _GoldInputState extends State<GoldInput> {
           obscureText: widget.obscureText && _obscure,
           keyboardType: widget.keyboardType,
           onChanged: widget.onChanged,
+          onSubmitted: widget.onSubmitted,
           maxLength: widget.maxLength,
           textCapitalization: widget.textCapitalization,
           maxLines: widget.obscureText ? 1 : widget.maxLines,
@@ -89,6 +94,7 @@ class _GoldInputState extends State<GoldInput> {
                     onPressed: () => setState(() => _obscure = !_obscure),
                   )
                 : widget.prefixIcon,
+            suffixIcon: widget.suffixIcon,
             errorText: widget.errorText,
             errorStyle: const TextStyle(
               color: AppColors.error,

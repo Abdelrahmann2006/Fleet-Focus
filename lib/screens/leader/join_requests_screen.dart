@@ -19,27 +19,82 @@ class _JoinRequestsScreenState extends State<JoinRequestsScreen> {
   Widget build(BuildContext context) {
     final leaderUid = context.read<AuthProvider>().user?.uid ?? '';
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.backgroundCard,
-          elevation: 0,
-          title: const Text('مركز الإشعارات والطلبات', 
-            style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800, fontSize: 18, color: AppColors.text)),
-          centerTitle: true,
-          bottom: const TabBar(
-            indicatorColor: AppColors.accent,
-            labelColor: AppColors.accent,
-            unselectedLabelColor: AppColors.textMuted,
-            labelStyle: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700),
-            tabs: [
-              Tab(text: 'إشعارات النظام', icon: Icon(Icons.mail_outline, size: 20)),
-              Tab(text: 'الاستمارات', icon: Icon(Icons.assignment_outlined, size: 20)),
-            ],
-          ),
-        ),
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: FirestoreService().watchLeaderNotifications(leaderUid),
+      builder: (context, allSnap) {
+        final allNotifs = allSnap.data ?? [];
+        final msgUnread = allNotifs.where((n) => n['type'] == 'message' && n['status'] == 'pending').length;
+        final formUnread = allNotifs.where((n) => n['type'] == 'form' && n['status'] == 'pending').length;
+
+        return DefaultTabController(
+          length: 2,
+          child: Scaffold(
+            backgroundColor: AppColors.background,
+            appBar: AppBar(
+              backgroundColor: AppColors.backgroundCard,
+              elevation: 0,
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('مركز الإشعارات',
+                    style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800, fontSize: 18, color: AppColors.text)),
+                  if (msgUnread + formUnread > 0) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(10)),
+                      child: Text('${msgUnread + formUnread}', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, fontFamily: 'Tajawal')),
+                    ),
+                  ],
+                ],
+              ),
+              centerTitle: true,
+              bottom: TabBar(
+                indicatorColor: AppColors.accent,
+                labelColor: AppColors.accent,
+                unselectedLabelColor: AppColors.textMuted,
+                labelStyle: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700),
+                tabs: [
+                  Tab(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.mail_outline, size: 18),
+                        const SizedBox(width: 6),
+                        const Text('الرسائل'),
+                        if (msgUnread > 0) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
+                            child: Text('$msgUnread', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900)),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Tab(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.assignment_outlined, size: 18),
+                        const SizedBox(width: 6),
+                        const Text('الاستمارات'),
+                        if (formUnread > 0) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(color: AppColors.accent, shape: BoxShape.circle),
+                            child: Text('$formUnread', style: const TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.w900)),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
         body: Column(
           children: [
             // ── قسم الرسائل المباشرة وطلبات المساعدة (دائماً في الأعلى) ──
@@ -58,6 +113,8 @@ class _JoinRequestsScreenState extends State<JoinRequestsScreen> {
         ),
       ),
     );
+  },
+  );
   }
 
   Widget _buildNotificationsList(String leaderUid, String type) {

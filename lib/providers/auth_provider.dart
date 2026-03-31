@@ -190,6 +190,13 @@ class AuthProvider extends ChangeNotifier {
     return stored == _hashPassword(uid, rawPassword);
   }
 
+  // نسخة مبسطة تستخدم المستخدم الحالي
+  Future<bool> verifyCurrentUserPassword(String rawPassword) async {
+    final uid = _firebaseUser?.uid;
+    if (uid == null) return false;
+    return verifyAppPassword(uid, rawPassword);
+  }
+
   Future<bool> hasDpcPassword(String uid) async {
     final prefs = await SharedPreferences.getInstance();
     final stored = prefs.getString('${_dpcPasswordKey}_$uid');
@@ -201,10 +208,11 @@ class AuthProvider extends ChangeNotifier {
     required String fullName,
     required String appPassword,
     required bool biometricEnabled,
+    bool bioFace = false,
+    bool bioFinger = false,
   }) async {
     if (_firebaseUser == null) return;
     
-    // ملاحظة: الكود يتم توليده وتفعيله لاحقاً من خلال LeaderUIProvider
     final data = {
       'uid': _firebaseUser!.uid,
       'email': _firebaseUser!.email,
@@ -213,6 +221,8 @@ class AuthProvider extends ChangeNotifier {
       'role': 'leader',
       'fullName': fullName,
       'biometricEnabled': biometricEnabled,
+      'bioFace': bioFace,
+      'bioFinger': bioFinger,
       'createdAt': FieldValue.serverTimestamp(),
     };
     await _db.collection('users').doc(_firebaseUser!.uid).set(data, SetOptions(merge: true));

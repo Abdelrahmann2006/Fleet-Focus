@@ -1,8 +1,8 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../widgets/stage_light_background.dart';
 import '../constants/colors.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -16,14 +16,18 @@ class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
   late AnimationController _logoController;
   late AnimationController _buttonsController;
-  late AnimationController _spotlightController; // للتحكم في حركة الكشاف
+  late AnimationController _eyeController;
+  late AnimationController _lightController;
+  late AnimationController _pulseController;
 
   late Animation<double> _logoScale;
   late Animation<double> _logoOpacity;
   late Animation<double> _logoY;
   late Animation<double> _buttonsOpacity;
   late Animation<double> _buttonsY;
-  late Animation<double> _spotlightMovement; // حركة الكشاف الأفقية
+  late Animation<double> _eyeMove;
+  late Animation<double> _lightAngle;
+  late Animation<double> _pulse;
 
   @override
   void initState() {
@@ -37,10 +41,18 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-    _spotlightController = AnimationController(
+    _eyeController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 4), // مدة الحركة كاملة
-    )..repeat(reverse: true); // اجعلها تتكرر للأمام والخلف
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+    _lightController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat(reverse: true);
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
 
     _logoScale = Tween<double>(begin: 0.6, end: 1.0).animate(
       CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
@@ -56,10 +68,17 @@ class _SplashScreenState extends State<SplashScreen>
     _buttonsY = Tween<double>(begin: 30, end: 0).animate(
       CurvedAnimation(parent: _buttonsController, curve: Curves.easeOut),
     );
-
-    // حركة الكشاف الأفقية (رايح جاي)
-    _spotlightMovement = Tween<double>(begin: -15.0, end: 15.0).animate(
-      CurvedAnimation(parent: _spotlightController, curve: Curves.easeInOutSine),
+    // حركة العين يمين ويسار
+    _eyeMove = Tween<double>(begin: -8.0, end: 8.0).animate(
+      CurvedAnimation(parent: _eyeController, curve: Curves.easeInOutSine),
+    );
+    // زاوية الضوء النازل
+    _lightAngle = Tween<double>(begin: -0.15, end: 0.15).animate(
+      CurvedAnimation(parent: _lightController, curve: Curves.easeInOutSine),
+    );
+    // نبض الأيقونة
+    _pulse = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
     Future.delayed(const Duration(milliseconds: 300), () {
@@ -75,7 +94,9 @@ class _SplashScreenState extends State<SplashScreen>
   void dispose() {
     _logoController.dispose();
     _buttonsController.dispose();
-    _spotlightController.dispose(); // تخلص من المتحكم الجديد
+    _eyeController.dispose();
+    _lightController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -83,7 +104,6 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
 
-    // توجيه تلقائي إذا كان المستخدم مسجلاً بالفعل
     if (!auth.isLoading && auth.user != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final role = auth.user?.role;
@@ -93,10 +113,11 @@ class _SplashScreenState extends State<SplashScreen>
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background.withOpacity(0.95), // خلفية أغمق قليلاً
+      backgroundColor: const Color(0xFF060610),
       body: Stack(
         children: [
-          const StageLightBackground(), // خلفية Matrix الخفيفة
+          // خلفية نجوم ونقاط خفيفة
+          const _StarfieldBackground(),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -104,7 +125,7 @@ class _SplashScreenState extends State<SplashScreen>
                 children: [
                   const Spacer(flex: 2),
 
-                  // الشعار + العنوان الجديد (Panopticon) + الكشاف المتحرك
+                  // الشعار الرئيسي
                   AnimatedBuilder(
                     animation: _logoController,
                     builder: (context, child) {
@@ -122,125 +143,81 @@ class _SplashScreenState extends State<SplashScreen>
                     child: Column(
                       children: [
                         const Text(
-                          'Panopticon', // الاسم في الأعلى
+                          'Panopticon',
                           style: TextStyle(
-                            fontSize: 34,
+                            fontSize: 36,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.accent, // لون ذهبي/نحاسي
+                            color: AppColors.accent,
                             fontFamily: 'Tajawal',
-                            letterSpacing: 2,
+                            letterSpacing: 3,
                           ),
                         ),
-                        const SizedBox(height: 20),
-                        // Stack لعزل الدرع والكشاف
-                        Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // 1. الكشاف الضوئي (تحت الدرع)
-                            AnimatedBuilder(
-                              animation: _spotlightController,
-                              builder: (context, child) {
-                                return Transform.translate(
-                                  offset: Offset(_spotlightMovement.value, 20),
-                                  child: child,
-                                );
-                              },
-                              child: Opacity(
-                                opacity: 0.6, // شفافية الكشاف
-                                child: Container(
-                                  width: 250, // عرض المخروط
-                                  height: 120, // طول الكشاف
-                                  decoration: const BoxDecoration(
-                                    gradient: RadialGradient(
-                                      colors: [
-                                        AppColors.accent, // نحاسي مركز
-                                        Colors.transparent, // يتلاشى
-                                      ],
-                                      center: Alignment.topCenter,
-                                      radius: 1.0,
-                                      focal: Alignment.topCenter,
-                                      focalRadius: 0.1,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // 2. شعار الدرع ذي العين (فوق الكشاف)
-                            Container(
-                              width: 100,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                gradient: AppGradients.goldGradientVertical,
-                                borderRadius: BorderRadius.circular(28),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.accent.withOpacity(0.5),
-                                    blurRadius: 30,
-                                    offset: const Offset(0, 10),
-                                  ),
-                                ],
-                              ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.shield_outlined,
-                                    size: 70,
-                                    color: AppColors.background,
-                                  ),
-                                  Icon(
-                                    Icons.visibility_outlined, // العين داخل الدرع
-                                    size: 40,
-                                    color: AppColors.background,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                        const SizedBox(height: 6),
+                        const Text(
+                          'نظام السيطرة والمراقبة',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textMuted,
+                            fontFamily: 'Tajawal',
+                            letterSpacing: 1,
+                          ),
                         ),
-                        const SizedBox(height: 40), // مسافة كافية قبل الأزرار
+                        const SizedBox(height: 28),
+
+                        // أيقونة العين الرئيسية مع نبض
+                        AnimatedBuilder(
+                          animation: _pulseController,
+                          builder: (_, __) => Transform.scale(
+                            scale: _pulse.value,
+                            child: _EyeIcon(eyeMove: _eyeMove),
+                          ),
+                        ),
                       ],
                     ),
                   ),
 
-                  const Spacer(flex: 3),
+                  const Spacer(flex: 1),
 
-                  // أزرار اختيار الأدوار
+                  // أزرار الدخول
                   AnimatedBuilder(
                     animation: _buttonsController,
                     builder: (context, child) {
                       return Transform.translate(
                         offset: Offset(0, _buttonsY.value),
-                        child:
-                            Opacity(opacity: _buttonsOpacity.value, child: child),
+                        child: Opacity(
+                            opacity: _buttonsOpacity.value, child: child),
                       );
                     },
                     child: Column(
                       children: [
-                        // زر السيدة (تصميم ذهبي بالكامل)
-                        _buildGoldButton(
-                          context,
-                          'أنا السيدة',
-                          'إدارة العناصر والاستمارات',
-                          Icons.workspace_premium, // أيقونة التاج
-                          () => context.push('/auth/leader'),
+                        // ── بوابة دخول السيدة (مع عين متحركة وضوء نازل) ──
+                        _LeaderGateButton(
+                          eyeMove: _eyeMove,
+                          lightAngle: _lightAngle,
+                          onTap: () => context.push('/auth/leader'),
                         ),
-
                         const SizedBox(height: 16),
-
-                        // زر العنصر (تصميم ذهبي بالكامل)
-                        _buildGoldButton(
-                          context,
-                          'أنا العنصر',
-                          'ملء استمارة الانضمام والولاء',
-                          Icons.fingerprint, // أيقونة بصمة الإصبع
-                          () => context.push('/auth/participant'),
+                        // ── بوابة دخول العنصر ──
+                        _ElementGateButton(
+                          onTap: () => context.push('/auth/participant'),
                         ),
                       ],
                     ),
                   ),
 
-                  const Spacer(flex: 1), // مسافة صغيرة في الأسفل
+                  const Spacer(flex: 1),
+
+                  // نص تذييل
+                  Text(
+                    'نظام مشفّر · اتصال آمن',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textMuted.withOpacity(0.4),
+                      fontFamily: 'Tajawal',
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
@@ -249,87 +226,341 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
   }
+}
 
-  // دالة مساعدة لبناء الأزرار الذهبية المصقولة
-  Widget _buildGoldButton(BuildContext context, String title, String subtitle,
-      IconData icon, VoidCallback onTap) {
+// ── أيقونة العين الرئيسية ────────────────────────────────────────
+class _EyeIcon extends StatelessWidget {
+  final Animation<double> eyeMove;
+  const _EyeIcon({required this.eyeMove});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
+      width: 110,
+      height: 110,
       decoration: BoxDecoration(
-        gradient: AppGradients.goldGradient, // ذهبي مصقول للزر بالكامل
-        borderRadius: BorderRadius.circular(20),
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [
+            AppColors.accent.withOpacity(0.2),
+            AppColors.accent.withOpacity(0.05),
+            Colors.transparent,
+          ],
+        ),
+        border: Border.all(color: AppColors.accent.withOpacity(0.4), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-          BoxShadow(
             color: AppColors.accent.withOpacity(0.3),
-            blurRadius: 15,
-            spreadRadius: -5,
-            offset: const Offset(0, 2),
+            blurRadius: 30,
+            spreadRadius: 5,
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
-            child: Row(
-              children: [
-                // أيقونة الزر باللون الغامق
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.2), // خلفية داكنة للأيقونة
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(
-                    icon,
-                    color: AppColors.background, // لون الأيقونة
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.background, // لون النص الرئيسي
-                          fontFamily: 'Tajawal',
-                        ),
-                      ),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.background
-                              .withOpacity(0.8), // لون النص الوصفي
-                          fontFamily: 'Tajawal',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                const Icon(
-                  Icons.chevron_left,
-                  color: AppColors.background, // لون السهم
-                ),
-              ],
-            ),
+      child: Center(
+        child: AnimatedBuilder(
+          animation: eyeMove,
+          builder: (_, __) => CustomPaint(
+            size: const Size(70, 40),
+            painter: _EyePainter(pupilOffset: eyeMove.value),
           ),
         ),
       ),
     );
   }
+}
+
+// ── رسام العين ──────────────────────────────────────────────────
+class _EyePainter extends CustomPainter {
+  final double pupilOffset;
+  const _EyePainter({required this.pupilOffset});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+
+    // شكل العين (قوس)
+    final eyePaint = Paint()
+      ..color = AppColors.accent
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+
+    final eyePath = Path();
+    eyePath.moveTo(0, cy);
+    eyePath.quadraticBezierTo(cx, -size.height * 0.6, size.width, cy);
+    eyePath.quadraticBezierTo(cx, size.height * 1.6, 0, cy);
+    canvas.drawPath(eyePath, eyePaint);
+
+    // حشو شفاف خفيف
+    final fillPaint = Paint()
+      ..color = AppColors.accent.withOpacity(0.06)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(eyePath, fillPaint);
+
+    // البؤبؤ (يتحرك)
+    final clampedOffset = pupilOffset.clamp(-10.0, 10.0);
+    final pupilX = cx + clampedOffset;
+
+    // هالة البؤبؤ
+    final glowPaint = Paint()
+      ..color = AppColors.accent.withOpacity(0.2)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.drawCircle(Offset(pupilX, cy), 12, glowPaint);
+
+    // البؤبؤ الخارجي
+    final outerPaint = Paint()
+      ..color = AppColors.accent.withOpacity(0.6)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(pupilX, cy), 10, outerPaint);
+
+    // البؤبؤ الداخلي
+    final innerPaint = Paint()
+      ..color = const Color(0xFF060610)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(pupilX, cy), 6, innerPaint);
+
+    // لمعة صغيرة
+    final shinePaint = Paint()
+      ..color = Colors.white.withOpacity(0.8)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(pupilX - 2, cy - 2), 2, shinePaint);
+  }
+
+  @override
+  bool shouldRepaint(_EyePainter old) => old.pupilOffset != pupilOffset;
+}
+
+// ── بوابة دخول السيدة ────────────────────────────────────────────
+class _LeaderGateButton extends StatelessWidget {
+  final Animation<double> eyeMove;
+  final Animation<double> lightAngle;
+  final VoidCallback onTap;
+  const _LeaderGateButton({
+    required this.eyeMove,
+    required this.lightAngle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.accent,
+              const Color(0xFFB8860B),
+              AppColors.accent.withOpacity(0.8),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.accent.withOpacity(0.4),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            children: [
+              // ضوء نازل من الأيقونة
+              AnimatedBuilder(
+                animation: lightAngle,
+                builder: (_, __) => Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Transform.rotate(
+                    angle: lightAngle.value,
+                    child: Container(
+                      height: 80,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.white.withOpacity(0.15),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // محتوى الزر
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+                child: Row(
+                  children: [
+                    const Icon(Icons.chevron_left,
+                        color: Color(0xFF1A0A00), size: 22),
+                    const Spacer(),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const Text(
+                          'بوابة دخول السيدة',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF1A0A00),
+                            fontFamily: 'Tajawal',
+                          ),
+                        ),
+                        const Text(
+                          'إدارة العناصر والسيطرة الكاملة',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0x991A0A00),
+                            fontFamily: 'Tajawal',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 16),
+                    // أيقونة عين متحركة في الزر
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Center(
+                        child: AnimatedBuilder(
+                          animation: eyeMove,
+                          builder: (_, __) => CustomPaint(
+                            size: const Size(36, 20),
+                            painter: _EyePainter(
+                              pupilOffset: eyeMove.value * 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── بوابة دخول العنصر ────────────────────────────────────────────
+class _ElementGateButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _ElementGateButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.backgroundCard,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.accent.withOpacity(0.3), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+        child: Row(
+          children: [
+            const Icon(Icons.chevron_left,
+                color: AppColors.textMuted, size: 22),
+            const Spacer(),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  'بوابة دخول العنصر',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
+                    fontFamily: 'Tajawal',
+                  ),
+                ),
+                Text(
+                  'الانضمام وملء استمارة الولاء',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                    fontFamily: 'Tajawal',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 16),
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: AppColors.accent.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.accent.withOpacity(0.2)),
+              ),
+              child: const Icon(Icons.fingerprint,
+                  color: AppColors.accent, size: 28),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── خلفية النجوم ─────────────────────────────────────────────────
+class _StarfieldBackground extends StatelessWidget {
+  const _StarfieldBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size.infinite,
+      painter: _StarsPainter(),
+    );
+  }
+}
+
+class _StarsPainter extends CustomPainter {
+  static final _rng = Random(42);
+  static final _stars = List.generate(80, (i) => [
+        _rng.nextDouble(),
+        _rng.nextDouble(),
+        _rng.nextDouble() * 1.5 + 0.5,
+      ]);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+    for (final s in _stars) {
+      paint.color = AppColors.accent.withOpacity(s[2] * 0.15);
+      canvas.drawCircle(
+          Offset(s[0] * size.width, s[1] * size.height), s[2], paint);
+    }
+    // خط ضوء خفي في المنتصف
+    final linePaint = Paint()
+      ..color = AppColors.accent.withOpacity(0.04)
+      ..strokeWidth = 1;
+    canvas.drawLine(Offset(size.width / 2, 0),
+        Offset(size.width / 2, size.height), linePaint);
+  }
+
+  @override
+  bool shouldRepaint(_StarsPainter old) => false;
 }

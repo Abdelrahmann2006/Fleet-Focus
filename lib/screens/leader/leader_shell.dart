@@ -9,7 +9,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/leader_ui_provider.dart';
 import '../../providers/participant_stream_provider.dart';
 import 'leader_home_tab.dart';
-import 'join_requests_screen.dart'; // ستعمل كمركز للإشعارات
+import 'join_requests_screen.dart';
+import 'leader_chat_screen.dart';
 import 'leader_settings_screen.dart';
 
 class LeaderShell extends StatefulWidget {
@@ -34,12 +35,7 @@ class _LeaderShellState extends State<LeaderShell> with SingleTickerProviderStat
         children: [
           LeaderHomeTab(isActive: _currentIndex == 0),
           const JoinRequestsScreen(), // شاشة الإشعارات (الاستمارات والطلبات)
-          const Center(
-            child: Text(
-              'شاشة الدردشات قيد التطوير',
-              style: TextStyle(color: Colors.white, fontFamily: 'Tajawal', fontSize: 16),
-            ),
-          ),
+          const LeaderChatScreen(),
           const LeaderSettingsScreen(),
         ],
       ),
