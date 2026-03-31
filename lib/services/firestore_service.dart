@@ -11,6 +11,7 @@ import '../models/inventory_item_model.dart';
 ///  • legal_assets/{uid}/signatures/{id}   — الأصول القانونية (التواقيع/الدستور)
 ///  • device_states/{uid}                  — snapshot دوري (ليس real-time)
 ///  • device_commands/{uid}                — أوامر Firestore (موجودة مسبقاً)
+///  • users/{leaderUid}/notifications      — الإشعارات (رسائل واستمارات) الجديدة
 ///
 /// سياسة الكاش:
 ///  يُفعَّل persistentCacheSettings لتقليل القراءات المدفوعة
@@ -245,5 +246,55 @@ class FirestoreService {
           return data;
         })
         .where((cmd) => cmd != null);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // NOTIFICATIONS (Messages & Forms) — نظام الإشعارات للسيدة
+  // ─────────────────────────────────────────────────────────────
+
+  /// إرسال إشعار جديد للسيدة (سواء كان رسالة عادية أو استمارة انضمام)
+  Future<void> sendNotification({
+    required String leaderUid,
+    required String senderUid,
+    required String senderName,
+    required String type, // 'message' أو 'form'
+    required String title,
+    required String body,
+    Map<String, dynamic>? payload,
+  }) async {
+    await _fs.collection('users').doc(leaderUid).collection('notifications').add({
+      'senderUid': senderUid,
+      'senderName': senderName,
+      'type': type,
+      'title': title,
+      'body': body,
+      'status': 'pending', // الحالات الممكنة: pending, read, approved, rejected
+      'payload': payload ?? {},
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Stream لجلب إشعارات السيدة لحظياً (للاستخدام في شاشة الإشعارات)
+  Stream<List<Map<String, dynamic>>> watchLeaderNotifications(String leaderUid) {
+    return _fs
+        .collection('users')
+        .doc(leaderUid)
+        .collection('notifications')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => {'id': d.id, ...d.data()}).toList());
+  }
+
+  /// تحديث حالة الإشعار (مثلاً عند الموافقة على الاستمارة أو رفضها)
+  Future<void> updateNotificationStatus(String leaderUid, String notifId, String status) async {
+    await _fs.collection('users').doc(leaderUid).collection('notifications').doc(notifId).update({
+      'status': status,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// حذف إشعار (يُسمح بحذف الرسائل دائماً، والاستمارات فقط إذا لم تكن pending)
+  Future<void> deleteNotification(String leaderUid, String notifId) async {
+    await _fs.collection('users').doc(leaderUid).collection('notifications').doc(notifId).delete();
   }
 }
