@@ -238,7 +238,7 @@ class NotificationCard extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               CircleAvatar(
-                backgroundColor: isForm ? AppColors.accent.withOpacity(0.1) : AppColors.surface,
+                backgroundColor: isForm ? AppColors.accent.withOpacity(0.1) : AppColors.backgroundElevated,
                 child: Icon(isForm ? Icons.assignment_ind_outlined : Icons.mail_outline, 
                             color: isForm ? AppColors.accent : AppColors.textSecondary, size: 20),
               )
@@ -426,7 +426,7 @@ class NotificationCard extends StatelessWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: AppColors.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+                    decoration: BoxDecoration(color: AppColors.backgroundElevated, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
