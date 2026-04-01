@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -184,19 +185,41 @@ class _PermissionsFlowScreenState extends State<PermissionsFlowScreen>
 
   Future<void> _refreshStatus() async {
     if (!mounted) return;
-    final results = await Future.wait(
-        List.generate(_perms.length, (i) => _checkPerm(i)));
+    List<bool> results;
+    if (kIsWeb) {
+      results = List.filled(_perms.length, true);
+    } else {
+      results = await Future.wait(
+          List.generate(_perms.length, (i) => _checkPerm(i)));
+    }
     if (!mounted) return;
+    final wasAllDone = _allDone;
     setState(() {
       for (int i = 0; i < results.length; i++) {
         _status[i] = results[i];
       }
       _allDone = results.every((r) => r);
     });
+    // انتقال تلقائي بعد اكتمال الصلاحيات
+    if (!wasAllDone && _allDone && mounted) {
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (mounted) _advanceToNextStep();
+    }
+  }
+
+  Future<void> _advanceToNextStep() async {
+    final uid = context.read<AuthProvider>().user?.uid;
+    if (uid != null) {
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'applicationStatus': 'approved_active',
+        'joinedAt': FieldValue.serverTimestamp(),
+      });
+    }
+    if (mounted) context.go('/participant/device-setup');
   }
 
   Future<void> _requestPerm(int i) async {
-    if (_loading) return;
+    if (_loading || kIsWeb) return;
     setState(() => _loading = true);
     try {
       final p = _perms[i];
@@ -206,9 +229,21 @@ class _PermissionsFlowScreenState extends State<PermissionsFlowScreen>
           await openAppSettings();
         }
       } else if (p.openFn != null) {
-        await p.openFn!();
+        try {
+          await p.openFn!();
+        } catch (_) {
+          // الصلاحية غير متاحة في هذا الجهاز — نتجاوزها
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('الإذن "${p.nameAr}" غير متاح على هذا الجهاز', style: const TextStyle(fontFamily: 'Tajawal')),
+              backgroundColor: AppColors.warning,
+              duration: const Duration(seconds: 2),
+            ));
+            setState(() => _status[i] = true);
+          }
+        }
       }
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 600));
       await _refreshStatus();
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -216,18 +251,22 @@ class _PermissionsFlowScreenState extends State<PermissionsFlowScreen>
   }
 
   Future<void> _requestAll() async {
-    if (_loading) return;
+    if (_loading || kIsWeb) return;
     setState(() => _loading = true);
     try {
       final runtimePerms = <Permission>[];
       for (final p in _perms) {
         if (p.runtimePerm != null) runtimePerms.add(p.runtimePerm!);
       }
-      await runtimePerms.request();
+      if (runtimePerms.isNotEmpty) await runtimePerms.request();
       for (int i = 0; i < _perms.length; i++) {
         if (_perms[i].isSystemSetting && !(_status[i] ?? false)) {
-          await _perms[i].openFn?.call();
-          await Future.delayed(const Duration(seconds: 1));
+          try {
+            await _perms[i].openFn?.call();
+            await Future.delayed(const Duration(seconds: 1));
+          } catch (_) {
+            setState(() => _status[i] = true);
+          }
         }
       }
       await Future.delayed(const Duration(milliseconds: 500));
@@ -400,113 +439,76 @@ class _PermissionsFlowScreenState extends State<PermissionsFlowScreen>
       ),
       child: Column(
         children: [
-          if (!_allDone)
+          if (kIsWeb) ...[
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _loading ? null : _requestAll,
+                onPressed: _advanceToNextStep,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accent,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                icon: _loading
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                            color: Colors.black, strokeWidth: 2),
-                      )
-                    : const Icon(Icons.lock_open_rounded,
-                        color: Colors.black, size: 20),
-                label: Text(
-                  _loading ? 'جارٍ الطلب...' : 'منح جميع الصلاحيات دفعة واحدة',
-                  style: const TextStyle(
-                    fontFamily: 'Tajawal',
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: Colors.black,
+                icon: const Icon(Icons.arrow_forward_rounded, color: Colors.black, size: 20),
+                label: const Text('المتابعة (وضع الويب)', style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700, fontSize: 15, color: Colors.black)),
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text('الصلاحيات الكاملة تُفعَّل على أندرويد فقط', style: TextStyle(fontFamily: 'Tajawal', fontSize: 11, color: AppColors.textMuted), textAlign: TextAlign.center),
+          ] else ...[
+            if (!_allDone)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _loading ? null : _requestAll,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: _loading
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                      : const Icon(Icons.lock_open_rounded, color: Colors.black, size: 20),
+                  label: Text(
+                    _loading ? 'جارٍ الطلب...' : 'منح جميع الصلاحيات دفعة واحدة',
+                    style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700, fontSize: 15, color: Colors.black),
                   ),
                 ),
               ),
-            ),
-          if (_allDone) ...[
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: AppColors.success.withValues(alpha: 0.5)),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.check_circle_rounded,
-                      color: AppColors.success, size: 22),
-                  SizedBox(width: 10),
-                  Text(
-                    'جميع الصلاحيات مُفعَّلة ✓',
-                    style: TextStyle(
-                      fontFamily: 'Tajawal',
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: AppColors.success,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () async {
-  // 1. إخبار السيدة فوراً أن الجهاز أصبح تحت السيطرة وتم سحب الصلاحيات
-  final uid = context.read<AuthProvider>().user?.uid;
-  if (uid != null) {
-    await FirebaseFirestore.instance.collection('users').doc(uid).update({
-      'applicationStatus': 'approved_active', 
-      'joinedAt': FieldValue.serverTimestamp(),
-    });
-  }
-  
-  // 2. الانتقال للخطوة التالية
-  if (context.mounted) {
-    context.go('/participant/device-setup');
-  }
-},
-
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.success,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+            if (_allDone) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.success.withValues(alpha: 0.5)),
                 ),
-                child: const Text(
-                  'متابعة إعداد الجهاز',
-                  style: TextStyle(
-                    fontFamily: 'Tajawal',
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                    color: Colors.white,
-                  ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.check_circle_rounded, color: AppColors.success, size: 22),
+                    SizedBox(width: 10),
+                    Text('جميع الصلاحيات مُفعَّلة ✓', style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.success)),
+                  ],
                 ),
               ),
-            ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _advanceToNextStep,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('متابعة إعداد الجهاز', style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800, fontSize: 16, color: Colors.white)),
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            const Text('لا يمكن تخطي هذه الخطوة على الجهاز', style: TextStyle(fontFamily: 'Tajawal', fontSize: 11, color: AppColors.textMuted), textAlign: TextAlign.center),
           ],
-          const SizedBox(height: 8),
-          Text(
-            'لا يمكن تخطي هذه الخطوة',
-            style: TextStyle(
-              fontFamily: 'Tajawal',
-              fontSize: 11,
-              color: AppColors.textMuted,
-            ),
-            textAlign: TextAlign.center,
-          ),
         ],
       ),
     );

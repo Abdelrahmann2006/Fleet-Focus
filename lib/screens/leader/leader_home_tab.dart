@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../constants/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/leader_ui_provider.dart';
+import '../../services/gemini_service.dart';
 import '../../widgets/participant_card_widget.dart';
 import '../../models/participant_card_model.dart';
 
@@ -65,9 +66,21 @@ class _LeaderHomeTabState extends State<LeaderHomeTab> {
                     _buildTopBar(context, leaderData),
                     _buildSearchBar(context),
                     _buildStatsRow(allParticipants),
-                    Expanded(child: _buildListOrGrid(context, filteredList)), // تم تعديل اسم الدالة
+                    Expanded(child: _buildListOrGrid(context, filteredList)),
                   ],
                 ),
+              ),
+              floatingActionButton: FloatingActionButton.extended(
+                onPressed: () => _openGeminiPanel(context, allParticipants),
+                backgroundColor: const Color(0xFF1A1040),
+                elevation: 4,
+                icon: ShaderMask(
+                  shaderCallback: (r) => const LinearGradient(
+                    colors: [Color(0xFF9B59B6), Color(0xFFC39BD3)],
+                  ).createShader(r),
+                  child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 20),
+                ),
+                label: const Text('Gemini AI', style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700, color: Color(0xFFC39BD3), fontSize: 13)),
               ),
             );
           },
@@ -229,11 +242,135 @@ class _LeaderHomeTabState extends State<LeaderHomeTab> {
     // إذا كان العرض قائمة (List) - وهو الوضع الافتراضي في صورك
     // استخدام ListView.builder يسمح للبطاقة بأخذ الارتفاع الذي تحتاجه (Wrap Content)
     return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 80), // مسافة من الأسفل لعدم تغطية الفلوتنج باتون
+      padding: const EdgeInsets.only(bottom: 90),
       itemCount: list.length,
       itemBuilder: (_, i) => Padding(
         padding: const EdgeInsets.only(bottom: 4.0),
         child: ParticipantCardWidget(p: list[i]),
+      ),
+    );
+  }
+
+  // ── لوحة Gemini AI للأوامر الطبيعية ──────────────────────────
+  void _openGeminiPanel(BuildContext context, List<ParticipantCardModel> participants) {
+    final cmdCtrl = TextEditingController();
+    String? lastAnswer;
+    bool loading = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF0F0B1E),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSB) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Row(
+                  children: [
+                    IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close, color: AppColors.textMuted, size: 20)),
+                    const Spacer(),
+                    ShaderMask(
+                      shaderCallback: (r) => const LinearGradient(colors: [Color(0xFF9B59B6), Color(0xFFE8DAFF)]).createShader(r),
+                      child: const Text('مساعد Gemini AI', style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w900, fontSize: 18, color: Colors.white)),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.auto_awesome_rounded, color: Color(0xFF9B59B6), size: 22),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                const Text('اسألني عن أي عنصر، أو أعطني أمراً بلغتك الطبيعية', textAlign: TextAlign.right, style: TextStyle(color: AppColors.textMuted, fontFamily: 'Tajawal', fontSize: 12)),
+                const SizedBox(height: 16),
+                if (lastAnswer != null)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A0F2E),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF9B59B6).withOpacity(0.4)),
+                    ),
+                    child: Text(lastAnswer!, textAlign: TextAlign.right, textDirection: TextDirection.rtl,
+                        style: const TextStyle(color: AppColors.text, fontFamily: 'Tajawal', fontSize: 14, height: 1.5)),
+                  ),
+                Row(
+                  children: [
+                    GestureDetector(
+                      onTap: loading ? null : () async {
+                        final q = cmdCtrl.text.trim();
+                        if (q.isEmpty) return;
+                        setSB(() => loading = true);
+                        final ctx2 = {
+                          'عدد_العناصر': participants.length,
+                          'العناصر_النشطون': participants.where((p) => p.applicationStatus == 'approved_active').length,
+                          'العناصر': participants.map((p) => '${p.name} (${p.applicationStatus})').join(', '),
+                        };
+                        final result = await GeminiService.instance.naturalQuery(q, ctx2);
+                        setSB(() { lastAnswer = result.answer; loading = false; });
+                        cmdCtrl.clear();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(colors: [Color(0xFF7D3C98), Color(0xFF9B59B6)]),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: loading
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A1040),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF9B59B6).withOpacity(0.3)),
+                        ),
+                        child: TextField(
+                          controller: cmdCtrl,
+                          textAlign: TextAlign.right,
+                          textDirection: TextDirection.rtl,
+                          style: const TextStyle(color: AppColors.text, fontFamily: 'Tajawal', fontSize: 14),
+                          maxLines: 2,
+                          minLines: 1,
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            hintText: 'مثال: كم عنصر الآن؟',
+                            hintStyle: TextStyle(color: AppColors.textMuted, fontFamily: 'Tajawal', fontSize: 13),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6, runSpacing: 6, alignment: WrapAlignment.end,
+                  children: ['كم عناصري الآن؟', 'من لم يمتثل؟', 'من الأكثر نشاطاً؟'].map((s) =>
+                    GestureDetector(
+                      onTap: () { cmdCtrl.text = s; },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(color: const Color(0xFF9B59B6).withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFF9B59B6).withOpacity(0.3))),
+                        child: Text(s, style: const TextStyle(color: Color(0xFFC39BD3), fontFamily: 'Tajawal', fontSize: 11)),
+                      ),
+                    )
+                  ).toList(),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

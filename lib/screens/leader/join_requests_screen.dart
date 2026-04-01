@@ -341,15 +341,44 @@ class NotificationCard extends StatelessWidget {
   }
 
   // ── 1. نافذة مراجعة الاستمارة ─────────────────────────────────────────────
+  static const Map<String, String> _fieldLabels = {
+    'fullName': 'الاسم الكامل', 'birthdate': 'تاريخ الميلاد', 'gender': 'الجنس',
+    'nationality': 'الجنسية', 'city': 'المدينة', 'maritalStatus': 'الحالة الاجتماعية',
+    'occupation': 'المهنة', 'education': 'المستوى التعليمي', 'height': 'الطول',
+    'weight': 'الوزن', 'bloodType': 'فصيلة الدم', 'phoneNumber': 'رقم الهاتف',
+    'email': 'البريد الإلكتروني', 'hasChronicDiseases': 'أمراض مزمنة',
+    'chronicDetails': 'تفاصيل الأمراض', 'hasMedications': 'يتناول أدوية',
+    'medicationDetails': 'تفاصيل الأدوية', 'hasDisabilities': 'إعاقات',
+    'disabilityDetails': 'تفاصيل الإعاقة', 'psychStatus': 'الحالة النفسية',
+    'anxietyLevel': 'مستوى القلق', 'depressionHistory': 'تاريخ الاكتئاب',
+    'hasPsychTreatment': 'علاج نفسي سابق', 'selfHarmHistory': 'تاريخ إيذاء النفس',
+    'obedience': 'مستوى الطاعة', 'controlAcceptance': 'قبول السيطرة',
+    'limitsTested': 'اختبر حدوده', 'skills': 'المهارات', 'languages': 'اللغات',
+    'techLevel': 'مستوى التقنية', 'income': 'الدخل الشهري', 'hasDebts': 'ديون',
+    'debtDetails': 'تفاصيل الديون', 'livingStatus': 'وضع السكن',
+    'agreeToTerms': 'موافقة على الشروط', 'digitalConsent': 'موافقة رقمية',
+    'fullConsent': 'موافقة كاملة', 'redLines': 'الخطوط الحمراء',
+    'safeword': 'كلمة الأمان', 'emergencyContact': 'جهة الاتصال الطارئة',
+  };
+
+  bool _isEmpty(dynamic v) {
+    if (v == null) return true;
+    final s = v.toString().trim();
+    return s.isEmpty || s == 'null' || s == '-' || s == 'غير محدد';
+  }
+
   void _showReviewDialog(BuildContext context, Map<String, dynamic> item) {
+    final payload = (item['payload'] as Map<String, dynamic>? ?? {});
+    final emptyCount = payload.values.where(_isEmpty).length;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.backgroundCard,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
       builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
-        maxChildSize: 0.95,
+        initialChildSize: 0.90,
+        maxChildSize: 0.97,
         minChildSize: 0.5,
         expand: false,
         builder: (_, scrollController) => Column(
@@ -359,30 +388,83 @@ class NotificationCard extends StatelessWidget {
               width: 50, height: 4,
               decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(10)),
             ),
-            const Text('مراجعة الاستمارة الشاملة', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w900, fontSize: 18, fontFamily: 'Tajawal')),
-            const Divider(color: AppColors.border, height: 30, thickness: 1),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (emptyCount > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(color: AppColors.error.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
+                      child: Text('$emptyCount حقل فارغ', style: const TextStyle(color: AppColors.error, fontFamily: 'Tajawal', fontSize: 12, fontWeight: FontWeight.bold)),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(color: AppColors.success.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
+                      child: const Text('الاستمارة مكتملة', style: TextStyle(color: AppColors.success, fontFamily: 'Tajawal', fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  const Text('مراجعة الاستمارة الشاملة', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w900, fontSize: 17, fontFamily: 'Tajawal')),
+                ],
+              ),
+            ),
+            const Divider(color: AppColors.border, height: 20, thickness: 1),
             Expanded(
               child: ListView(
                 controller: scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
-                  ...(item['payload'] as Map<String, dynamic>? ?? {}).entries.map((e) => Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(e.key, style: const TextStyle(color: AppColors.textMuted, fontSize: 12, fontFamily: 'Tajawal', fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 4),
-                        Text(e.value.toString(), textAlign: TextAlign.right, style: const TextStyle(color: AppColors.text, fontSize: 15, fontFamily: 'Tajawal')),
-                        const Divider(color: AppColors.border, thickness: 0.5, height: 20),
-                      ],
-                    ),
-                  )),
+                  ...payload.entries.map((e) {
+                    final empty = _isEmpty(e.value);
+                    final label = _fieldLabels[e.key] ?? e.key;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: empty ? AppColors.error.withOpacity(0.07) : AppColors.backgroundElevated,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: empty ? AppColors.error.withOpacity(0.4) : AppColors.border,
+                          width: empty ? 1.5 : 0.8,
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(empty ? Icons.warning_amber_rounded : Icons.check_circle_outline,
+                              size: 16, color: empty ? AppColors.error : AppColors.success),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(label, textAlign: TextAlign.right,
+                                    style: TextStyle(color: empty ? AppColors.error : AppColors.textMuted,
+                                        fontFamily: 'Tajawal', fontSize: 11, fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 3),
+                                Text(
+                                  empty ? '— فارغ —' : e.value.toString(),
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(
+                                    color: empty ? AppColors.error.withOpacity(0.7) : AppColors.text,
+                                    fontFamily: 'Tajawal', fontSize: 14,
+                                    fontStyle: empty ? FontStyle.italic : FontStyle.normal,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 8),
                 ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
                   Expanded(child: _actionBtn('رفض وإتلاف الطلب', AppColors.error, () {
@@ -453,8 +535,17 @@ class NotificationCard extends StatelessWidget {
   void _showAcceptProtocolDialog(BuildContext context, Map<String, dynamic> item) {
     String auditSchedule = 'بمجرد استلام الإشعار، بدون إنذار مسبق';
     String locationText = 'لم يُحدد بعد';
+    DateTime? meetingDate;
+    TimeOfDay? meetingTime;
     String dressCode = 'حلاقة الشعر واللحية بالكامل، تيشيرت أسود سادة، بنطلون أسود، حذاء أسود.';
     String extraNotes = '';
+
+    String _formatMeetingDateTime(DateTime? d, TimeOfDay? t) {
+      if (d == null) return locationText;
+      final dateStr = '${d.year}/${d.month.toString().padLeft(2,'0')}/${d.day.toString().padLeft(2,'0')}';
+      final timeStr = t != null ? ' — الساعة ${t.hour.toString().padLeft(2,'0')}:${t.minute.toString().padLeft(2,'0')}' : '';
+      return '$dateStr$timeStr — $locationText';
+    }
     
     showDialog(
       context: context,
@@ -468,7 +559,7 @@ class NotificationCard extends StatelessWidget {
             ladyName: ladyName,
             assetCode: assetCode,
             auditSchedule: auditSchedule,
-            locationTimeSection: locationText,
+            locationTimeSection: _formatMeetingDateTime(meetingDate, meetingTime),
             dressCode: dressCode,
             extraNotes: extraNotes,
           );
@@ -503,8 +594,94 @@ class NotificationCard extends StatelessWidget {
                           _buildTextField('متى سيبدأ الجرد؟', (v) => setS(() => auditSchedule = v), initial: auditSchedule),
                           const SizedBox(height: 12),
                           
-                          _fieldLabel('المقر والموعد الدقيق'),
-                          _buildTextField('أدخل الإحداثيات والوقت', (v) => setS(() => locationText = v)),
+                          _fieldLabel('موعد المقابلة (التاريخ والوقت)'),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () async {
+                                    final picked = await showDatePicker(
+                                      context: ctx,
+                                      initialDate: meetingDate ?? DateTime.now().add(const Duration(days: 3)),
+                                      firstDate: DateTime.now(),
+                                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                                      builder: (c, child) => Theme(
+                                        data: ThemeData.dark().copyWith(
+                                          colorScheme: const ColorScheme.dark(primary: AppColors.accent, onPrimary: Colors.black, surface: AppColors.backgroundCard),
+                                        ),
+                                        child: child!,
+                                      ),
+                                    );
+                                    if (picked != null) setS(() => meetingDate = picked);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.background,
+                                      border: Border.all(color: meetingDate != null ? AppColors.accent.withOpacity(0.6) : AppColors.border),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          meetingDate == null ? 'اختر التاريخ' 
+                                              : '${meetingDate!.year}/${meetingDate!.month.toString().padLeft(2,'0')}/${meetingDate!.day.toString().padLeft(2,'0')}',
+                                          style: TextStyle(fontFamily: 'Tajawal', fontSize: 13,
+                                              color: meetingDate == null ? AppColors.textMuted : AppColors.text),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        const Icon(Icons.calendar_today_rounded, color: AppColors.accent, size: 16),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () async {
+                                    final picked = await showTimePicker(
+                                      context: ctx,
+                                      initialTime: meetingTime ?? const TimeOfDay(hour: 20, minute: 0),
+                                      builder: (c, child) => Theme(
+                                        data: ThemeData.dark().copyWith(
+                                          colorScheme: const ColorScheme.dark(primary: AppColors.accent, onPrimary: Colors.black, surface: AppColors.backgroundCard),
+                                        ),
+                                        child: child!,
+                                      ),
+                                    );
+                                    if (picked != null) setS(() => meetingTime = picked);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.background,
+                                      border: Border.all(color: meetingTime != null ? AppColors.accent.withOpacity(0.6) : AppColors.border),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          meetingTime == null ? 'اختر الوقت'
+                                              : '${meetingTime!.hour.toString().padLeft(2,'0')}:${meetingTime!.minute.toString().padLeft(2,'0')}',
+                                          style: TextStyle(fontFamily: 'Tajawal', fontSize: 13,
+                                              color: meetingTime == null ? AppColors.textMuted : AppColors.text),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        const Icon(Icons.access_time_rounded, color: AppColors.accent, size: 16),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          _fieldLabel('مكان المقابلة'),
+                          _buildTextField('العنوان أو الإحداثيات', (v) => setS(() => locationText = v)),
                           const SizedBox(height: 12),
 
                           _fieldLabel('الزي الرسمي وهيئة المثول'),

@@ -57,6 +57,19 @@ class _DpcCommandCenterScreenState extends State<DpcCommandCenterScreen>
   bool _dpcPwError = false;
   bool _dpcPwChecking = false;
 
+  // ── البحث والفئات ────────────────────────────────────────────
+  final _searchCtrl = TextEditingController();
+  bool _searchActive = false;
+  int _activeCat = -1; // -1 = الكل
+  static const _cats = ['الأمان', 'المراقبة', 'السلوك', 'ذكاء اصطناعي'];
+  // خريطة: فئة → أرقام التبويبات
+  static const _catMap = {
+    0: [0,1,2,3,4,5,6,7,14,17],              // الأمان والسيطرة
+    1: [8,9,10,11,12,13,15,16,18,19,29,30,31,32,33], // المراقبة
+    2: [20,21,22,23,24,25,26,27,28,34,35,36], // السلوك والإدارة
+    3: [36],                                   // Gemini
+  };
+
   // ── حالة الأوامر ─────────────────────────────────────────────
   bool _sendingCommand = false;
   String _commandFeedback = '';
@@ -144,6 +157,7 @@ class _DpcCommandCenterScreenState extends State<DpcCommandCenterScreen>
     _lostPinCtrl.dispose();
     _ntfyTopicCtrl.dispose();
     _dpcPwCtrl.dispose();
+    _searchCtrl.dispose();
     super.dispose();
   }
 
@@ -681,46 +695,130 @@ class _DpcCommandCenterScreenState extends State<DpcCommandCenterScreen>
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Row(
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.backgroundCard.withOpacity(0.8),
+        border: Border(bottom: BorderSide(color: AppColors.border.withOpacity(0.5))),
+      ),
+      child: Column(
         children: [
-          IconButton(
-            onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_back_ios, color: AppColors.text, size: 18),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 12, 16, 4),
+            child: Row(
               children: [
-                const Text('DPC Command Center',
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.text,
-                        fontFamily: 'Tajawal')),
-                Text('${_fleet.length} جهاز في الأسطول',
-                    style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textMuted,
-                        fontFamily: 'Tajawal')),
+                IconButton(
+                  onPressed: () => context.pop(),
+                  icon: const Icon(Icons.arrow_back_ios, color: AppColors.text, size: 18),
+                ),
+                Expanded(
+                  child: _searchActive
+                      ? TextField(
+                          controller: _searchCtrl,
+                          autofocus: true,
+                          textAlign: TextAlign.right,
+                          textDirection: TextDirection.rtl,
+                          style: const TextStyle(color: AppColors.text, fontFamily: 'Tajawal', fontSize: 14),
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            hintText: 'ابحث عن تبويب...',
+                            hintStyle: const TextStyle(color: AppColors.textMuted, fontFamily: 'Tajawal', fontSize: 13),
+                            border: InputBorder.none,
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.close, color: AppColors.textMuted, size: 18),
+                              onPressed: () => setState(() { _searchActive = false; _searchCtrl.clear(); }),
+                            ),
+                          ),
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('DPC Command Center', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.text, fontFamily: 'Tajawal')),
+                            Text('${_fleet.length} جهاز · $_selectedName', style: const TextStyle(fontSize: 11, color: AppColors.textMuted, fontFamily: 'Tajawal')),
+                          ],
+                        ),
+                ),
+                Row(
+                  children: [
+                    Container(width: 8, height: 8, decoration: BoxDecoration(shape: BoxShape.circle, color: _deviceState.isNotEmpty ? AppColors.success : AppColors.textMuted, boxShadow: _deviceState.isNotEmpty ? [BoxShadow(color: AppColors.success.withOpacity(0.5), blurRadius: 5)] : null)),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => setState(() { _searchActive = !_searchActive; if (!_searchActive) _searchCtrl.clear(); }),
+                      child: Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(color: AppColors.backgroundElevated, borderRadius: BorderRadius.circular(8)),
+                        child: Icon(_searchActive ? Icons.close : Icons.search, color: AppColors.accent, size: 18),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
-          // مؤشر حالة الاتصال
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _deviceState.isNotEmpty ? AppColors.success : AppColors.textMuted,
-              boxShadow: _deviceState.isNotEmpty
-                  ? [BoxShadow(color: AppColors.success.withOpacity(0.5), blurRadius: 6)]
-                  : null,
+          // فئات سريعة
+          if (!_searchActive) SizedBox(
+            height: 34,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _cats.length + 1,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemBuilder: (ctx, i) {
+                final idx = i - 1;
+                final selected = _activeCat == idx;
+                final label = i == 0 ? 'الكل' : _cats[idx];
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _activeCat = idx);
+                    if (idx >= 0) {
+                      final firstTab = (_catMap[idx] ?? [0]).first;
+                      DefaultTabController.of(ctx).animateTo(firstTab);
+                    }
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: selected ? AppColors.accent : AppColors.backgroundElevated,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: selected ? AppColors.accent : AppColors.border, width: 0.8),
+                    ),
+                    child: Text(label, style: TextStyle(fontFamily: 'Tajawal', fontSize: 12, fontWeight: FontWeight.w600, color: selected ? Colors.black : AppColors.textSecondary)),
+                  ),
+                );
+              },
             ),
           ),
-          const SizedBox(width: 16),
+          // نتائج البحث
+          if (_searchActive && _searchCtrl.text.isNotEmpty)
+            Builder(builder: (ctx) {
+              final q = _searchCtrl.text.trim().toLowerCase();
+              final matches = _tabs.asMap().entries.where((e) => e.value.label.toLowerCase().contains(q) || e.value.label.contains(q)).toList();
+              if (matches.isEmpty) return const Padding(padding: EdgeInsets.all(8), child: Text('لا توجد نتائج', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Tajawal', fontSize: 12)));
+              return SizedBox(
+                height: 44,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  children: matches.map((e) => GestureDetector(
+                    onTap: () {
+                      DefaultTabController.of(ctx).animateTo(e.key);
+                      setState(() { _searchActive = false; _searchCtrl.clear(); });
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(left: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(color: AppColors.accent.withOpacity(0.15), borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.accent.withOpacity(0.4))),
+                      child: Row(children: [
+                        Icon(e.value.icon, color: AppColors.accent, size: 14),
+                        const SizedBox(width: 6),
+                        Text(e.value.label, style: const TextStyle(color: AppColors.accent, fontFamily: 'Tajawal', fontSize: 12, fontWeight: FontWeight.w600)),
+                      ]),
+                    ),
+                  )).toList(),
+                ),
+              );
+            }),
+          const SizedBox(height: 4),
         ],
       ),
     );

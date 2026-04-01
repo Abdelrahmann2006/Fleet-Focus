@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -62,8 +64,15 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     // تفعيل كاش RTDB للعمل offline
-    FirebaseDatabase.instance.setPersistenceEnabled(true);
-    FirebaseDatabase.instance.setPersistenceCacheSizeBytes(10 * 1024 * 1024);
+    if (!kIsWeb) {
+      FirebaseDatabase.instance.setPersistenceEnabled(true);
+      FirebaseDatabase.instance.setPersistenceCacheSizeBytes(10 * 1024 * 1024);
+    }
+    // تحسين Firestore: كاش ذاكرة 40MB لتقليل القراءات
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: false,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
   } catch (e) {
     debugPrint('[Firebase] init error: $e');
   }
@@ -145,6 +154,13 @@ class CompetitionApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       routerConfig: appRouter,
       theme: _buildTheme(),
+      locale: const Locale('ar', 'SA'),
+      supportedLocales: const [Locale('ar', 'SA'), Locale('en', 'US')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       builder: (context, child) {
         return Directionality(
           textDirection: TextDirection.rtl,

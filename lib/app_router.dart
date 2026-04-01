@@ -25,6 +25,7 @@ import 'screens/participant/permissions_flow_screen.dart';
 import 'screens/participant/asset_audit_screen.dart';
 import 'screens/participant/interview_lock_screen.dart';
 import 'screens/participant/final_constitution_screen.dart';
+import 'screens/participant/security_lock_screen.dart';
 import 'screens/onboarding/constitution_screen.dart';
 import 'screens/onboarding/signature_screen.dart';
 import 'screens/onboarding/countdown_screen.dart';
@@ -111,7 +112,12 @@ final GoRouter appRouter = GoRouter(
         return loc == '/participant/final-constitution' ? null : '/participant/final-constitution';
       }
 
-      // هـ. مرحلة تفعيل الصلاحيات والسيطرة التقنية
+      // هـ. حالة انتظار تأكيد الانضمام
+      if (appStatus == 'join_request_pending') {
+        return loc == '/participant/purgatory' ? null : '/participant/purgatory';
+      }
+
+      // و. مرحلة تفعيل الصلاحيات والسيطرة التقنية
       if (!setupDone) {
         if (loc == '/participant/device-owner-setup' || loc == '/participant/permissions-flow') return null;
         return '/participant/device-setup';
@@ -151,6 +157,12 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/leader/dpc',
       builder: (_, state) => DpcCommandCenterScreen(targetUid: state.uri.queryParameters['uid']),
+    ),
+    GoRoute(
+      path: '/participant/security-lock',
+      builder: (_, state) => ParticipantSecurityLockScreen(
+        nextRoute: state.uri.queryParameters['next'] ?? '/participant/home',
+      ),
     ),
     GoRoute(path: '/participant/home',         builder: (_, __) => const ParticipantHomeScreen()),
     GoRoute(path: '/participant/device-setup', builder: (_, __) => const DeviceSetupScreen()),
